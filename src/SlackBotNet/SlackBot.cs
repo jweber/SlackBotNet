@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reactive.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -14,9 +13,6 @@ namespace SlackBotNet
 {
     public class SlackBot : IDisposable
     {
-        private static int messageId = 1;
-
-        private readonly string slackToken;
         private readonly IMessageBus messageBus;
         private readonly SlackBotState state;
         private readonly ISlackBotConfig config;
@@ -28,7 +24,6 @@ namespace SlackBotNet
         private IDisposable sendTimer = null;
 
         private SlackBot(
-            string slackToken,
             SlackBotState state,
             IDriver driver,
             IMessageBus bus,
@@ -38,7 +33,6 @@ namespace SlackBotNet
             this.config = config;
             this.driver = driver;
 
-            this.slackToken = slackToken;
             this.messageBus = bus;
 
             this.whenHandlers = new ConcurrentQueue<WhenHandler>();
@@ -56,7 +50,7 @@ namespace SlackBotNet
 
             var state = await driver.ConnectAsync(slackToken, bus);
 
-            var bot = new SlackBot(slackToken, state, driver, bus, defaultConfig);
+            var bot = new SlackBot(state, driver, bus, defaultConfig);
             bot.StartSendListener();
 
             bot.On<IHubJoined>(msg =>
@@ -138,7 +132,7 @@ namespace SlackBotNet
         {
             var msg = new
             {
-                id = Interlocked.Increment(ref messageId),
+                id = Guid.NewGuid().GetHashCode(),
                 type = "message",
                 channel = channel,
                 text = this.EncodeMessage(message)
