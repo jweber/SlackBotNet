@@ -2,7 +2,7 @@
 
 .NET Standard compatible client for the [Real Time Messaging API](https://api.slack.com/rtm).
 
-NOTE: This library is not currently full-featured and may be have unexpected issues. Please open issues when they are discovered. Pull requests are also greatly appreciated.
+NOTE: This library is not currently full-featured and may have unexpected issues. Please open issues when they are discovered. Pull requests are greatly appreciated.
 
 ## Getting Started
 
