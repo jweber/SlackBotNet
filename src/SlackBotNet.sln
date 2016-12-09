@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.25928.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SlackBotNet", "SlackBotNet\SlackBotNet.csproj", "{15E92469-2639-4070-BA4E-85101D2AD1CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlackBotNet.Tests", "SlackBotNet.Tests\SlackBotNet.Tests.csproj", "{96F6508C-97EB-498F-9844-91C594EF52FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlackBotNet.Matcher.Luis", "SlackBotNet.Matcher.Luis\SlackBotNet.Matcher.Luis.csproj", "{5762A4EA-F854-449D-80C1-6F02B14CB72E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{15E92469-2639-4070-BA4E-85101D2AD1CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E92469-2639-4070-BA4E-85101D2AD1CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15E92469-2639-4070-BA4E-85101D2AD1CC}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E92469-2639-4070-BA4E-85101D2AD1CC}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{96F6508C-97EB-498F-9844-91C594EF52FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96F6508C-97EB-498F-9844-91C594EF52FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96F6508C-97EB-498F-9844-91C594EF52FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96F6508C-97EB-498F-9844-91C594EF52FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5762A4EA-F854-449D-80C1-6F02B14CB72E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5762A4EA-F854-449D-80C1-6F02B14CB72E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5762A4EA-F854-449D-80C1-6F02B14CB72E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5762A4EA-F854-449D-80C1-6F02B14CB72E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
