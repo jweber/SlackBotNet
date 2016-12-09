@@ -74,6 +74,11 @@ namespace SlackBotNet
             // Handle .When setups
             bot.On<Message>(async msg =>
             {
+                // Ignore messages with reply_to that is set.
+                // They appear to be sent after the initial connection that the bot establishes.
+                if (!string.IsNullOrEmpty(msg.ReplyTo))
+                    return;
+
                 (decimal score, Match[] matches, WhenHandler handler) bestMatch = (-1m, null, null);
 
                 foreach (var handler in bot.whenHandlers)
