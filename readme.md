@@ -6,6 +6,10 @@ NOTE: This library is not currently full-featured and may be have unexpected iss
 
 ## Getting Started
 
+Installation:
+
+    nuget> Install-Package SlackBotNet
+
 Initialize a new instance of the bot:
 
     var bot = await SlackBot.InitializeAsync([slack authentication token]);

@@ -6,6 +6,8 @@
     <PackageVersion>0.5.0</PackageVersion>
     <Authors>j.weber</Authors>
     <Description>LUIS.ai matcher for SlackBotNet.</Description>
+    <PackageProjectUrl>https://github.com/jweber/SlackBotNet</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/jweber/SlackBotNet/blob/master/LICENSE</PackageLicenseUrl>   
     <PackageRequiresLicenseAcceptance>False</PackageRequiresLicenseAcceptance>
     <PackageTags>slack bot core rtm</PackageTags>
     <DebugType>portable</DebugType>
