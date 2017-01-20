@@ -17,7 +17,7 @@ namespace SlackBotNet.Matcher
         public override Task<Match[]> GetMatches(Message message)
         {
             if (!this.predicate.Invoke(message))
-                return base.NoMatch;
+                return NoMatch;
 
             return Task.FromResult(new[] { new Match(message.Text, 1) });
         }

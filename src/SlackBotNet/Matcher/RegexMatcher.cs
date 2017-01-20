@@ -19,7 +19,7 @@ namespace SlackBotNet.Matcher
         {
             var match = this.regex.Match(message.Text);
             if (!match.Success)
-                return Task.FromResult((Match[])null);
+                return NoMatch;
 
             var result = new List<Match>();
 

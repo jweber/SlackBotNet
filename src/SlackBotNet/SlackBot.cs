@@ -171,13 +171,13 @@ namespace SlackBotNet
                 {
                     var messageHubType = this.state.GetHubById(msg.Channel).HubType;
                     if ((hubs & messageHubType) != messageHubType)
-                        return null;
+                        return MessageMatcher.NoMatch;
 
                     if (messageHubType != HubType.DirectMessage)
                     {
                         bool messageAddressesBot = msg.Text?.IndexOf(this.state.BotUsername, StringComparison.OrdinalIgnoreCase) > -1;
                         if (!messageAddressesBot)
-                            return null;
+                            return MessageMatcher.NoMatch;
                     }
 
                     return match.GetMatches(msg);

@@ -18,7 +18,7 @@ namespace SlackBotNet.Matcher
             if (message.Text?.IndexOf(this.matchText, StringComparison.OrdinalIgnoreCase) > -1)
                 return Task.FromResult(new[] { new Match(message.Text, 1) });
 
-            return base.NoMatch;
+            return NoMatch;
         }
     }
 }

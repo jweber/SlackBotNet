@@ -8,7 +8,7 @@ namespace SlackBotNet
     {
         public abstract Task<Match[]> GetMatches(Message message);
 
-        protected Task<Match[]> NoMatch => Task.FromResult((Match[])null);
+        public static Task<Match[]> NoMatch => Task.FromResult((Match[])null);
 
         public static MessageMatcher operator | (MessageMatcher left, MessageMatcher right)
             => new OrMatcher(left, right);
