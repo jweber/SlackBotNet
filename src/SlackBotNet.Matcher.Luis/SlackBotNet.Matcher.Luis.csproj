@@ -1,5 +1,4 @@
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard1.3</TargetFramework>
     <PackageId>SlackBotNet.Matcher.Luis</PackageId>
@@ -7,7 +6,7 @@
     <Authors>j.weber</Authors>
     <Description>LUIS.ai matcher for SlackBotNet.</Description>
     <PackageProjectUrl>https://github.com/jweber/SlackBotNet</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/jweber/SlackBotNet/blob/master/LICENSE</PackageLicenseUrl>   
+    <PackageLicenseUrl>https://github.com/jweber/SlackBotNet/blob/master/LICENSE</PackageLicenseUrl>
     <PackageRequiresLicenseAcceptance>False</PackageRequiresLicenseAcceptance>
     <PackageTags>slack bot core rtm</PackageTags>
     <DebugType>portable</DebugType>
@@ -21,30 +20,9 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="**\*.cs" />
-    <EmbeddedResource Include="**\*.resx" />
-    <EmbeddedResource Include="compiler\resources\**\*" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Sdk">
-      <Version>1.0.0-alpha-20161104-2</Version>
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>  
-    <PackageReference Include="NETStandard.Library">
-      <Version>1.6.1</Version>
-    </PackageReference>
-    <PackageReference Include="Newtonsoft.Json">
-      <Version>9.0.1</Version>
-    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SlackBotNet\SlackBotNet.csproj" />
   </ItemGroup>
-  <PropertyGroup Label="Configuration">
-    <RootNamespace>SlackBotNet.Matcher</RootNamespace>
-  </PropertyGroup>  
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
