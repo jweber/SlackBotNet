@@ -8,6 +8,7 @@ using Newtonsoft.Json.Serialization;
 using SlackBotNet.Messages;
 using SlackBotNet.State;
 using SlackBotNet.Drivers;
+using SlackBotNet.Infrastructure;
 
 namespace SlackBotNet
 {
@@ -175,7 +176,9 @@ namespace SlackBotNet
 
                     if (messageHubType != HubType.DirectMessage)
                     {
-                        bool messageAddressesBot = msg.Text?.IndexOf(this.state.BotUsername, StringComparison.OrdinalIgnoreCase) > -1;
+                        bool messageAddressesBot = msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase)
+                                                   || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
+                        
                         if (!messageAddressesBot)
                             return MessageMatcher.NoMatch;
                     }

@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SlackBotNet.Messages;
 using SlackBotNet.State;
+using SlackBotNet.Infrastructure;
 
 namespace SlackBotNet
 {
@@ -34,7 +35,9 @@ namespace SlackBotNet
                 if (this.Hub.HubType == HubType.DirectMessage)
                     return true;
 
-                bool messageAddressesBot = msg.Text?.IndexOf(this.bot.State.BotUsername, StringComparison.OrdinalIgnoreCase) > -1;
+                bool messageAddressesBot = msg.Text.Contains(this.bot.State.BotUserId, StringComparison.OrdinalIgnoreCase)
+                                           || msg.Text.Contains(this.bot.State.BotUsername, StringComparison.OrdinalIgnoreCase);
+
                 if (messageAddressesBot)
                     return true;
 

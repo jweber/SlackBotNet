@@ -7,4 +7,10 @@ namespace SlackBotNet
         public static DateTimeOffset FromChannelTimestamp(this string timestamp)
             => DateTimeOffset.FromUnixTimeSeconds(long.Parse(timestamp.Split('.')[0]));
     }
+
+    internal static class StringExtensions
+    {
+        public static bool Contains(this string input, string substring, StringComparison stringComparison)
+            => !string.IsNullOrEmpty(input) && input.IndexOf(substring, stringComparison) > -1;
+    }
 }

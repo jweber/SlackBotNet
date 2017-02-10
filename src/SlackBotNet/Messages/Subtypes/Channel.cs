@@ -1,5 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
+using SlackBotNet.Infrastructure;
 
 namespace SlackBotNet.Messages.Subtypes
 {
