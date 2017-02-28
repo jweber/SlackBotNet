@@ -63,7 +63,7 @@ Bots can be configured to listen for messages on Channels they are joined to, gr
 
     bot.When(
         Matches.TextContaining("hello"), 
-        HubType.DirectMessage || HubType.Channel, 
+        HubType.DirectMessage | HubType.Channel, 
         async conv =>
         {
             ...
