@@ -75,11 +75,11 @@ When the bot is observing a channel or group, by default it will only listen for
 
     bot.When(
         Matches.TextContaining("hello"),
-	HubType.Channel | HubType.ObserveAllMessages,
-	async conv =>
-	{
-            ...
-	});
+        HubType.Channel | HubType.ObserveAllMessages,
+        async conv =>
+        {
+	    ...
+        });
 
 ## Multiple Handlers
 
