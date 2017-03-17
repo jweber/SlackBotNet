@@ -223,7 +223,6 @@ namespace SlackBotNet.Tests
                 Assert.True(false, "When handler never fired");
         }
 
-
         [Fact]
         public async Task ChannelMessage_BotDoesNotRespondWhenNotAddressedByName()
         {
@@ -234,10 +233,13 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("hello"), c =>
-            {
-                evt.Set();
-            });
+            bot.When(
+                Matches.TextContaining("hello"),
+                HubType.Channel,
+                c =>
+                {
+                    evt.Set();
+                });
 
             this.bus.Publish(new Message
             {
@@ -248,6 +250,35 @@ namespace SlackBotNet.Tests
 
             if (evt.WaitOne(100))
                 Assert.True(false, "When handler should not have been fired since the message didn't address the bot");
+        }
+
+        [Fact]
+        public async Task ChannelMessage_BotRespondWhenNotAddressedByName_WhenConfiguredToListenToAllMessages()
+        {
+            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+
+            this.state.AddUser("1", "user");
+            this.state.AddHub("1", "test hub", HubType.Channel);
+
+            var evt = new AutoResetEvent(false);
+
+            bot.When(
+                Matches.TextContaining("hello"),
+                HubType.Channel | HubType.ObserveAllMessages,
+                c =>
+                {
+                    evt.Set();
+                });
+
+            this.bus.Publish(new Message
+            {
+                Channel = "1",
+                User = "1",
+                Text = "hello"
+            });
+
+            if (!evt.WaitOne(100))
+                Assert.True(false, "When handler should have been fired since the message didn't address the bot");
         }
 
         [Theory]

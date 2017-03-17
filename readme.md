@@ -69,6 +69,18 @@ Bots can be configured to listen for messages on Channels they are joined to, gr
             ...
         });
 
+## Observing all messages in a channel
+
+When the bot is observing a channel or group, by default it will only listen for messages that contain the name of the bot in the message text. If you want the bot to listen to all messages in a channel, the `HubType.ObserveAllMessages` flag can be set.
+
+    bot.When(
+        Matches.TextContaining("hello"),
+	HubType.Channel | HubType.ObserveAllMessages,
+	async conv =>
+	{
+            ...
+	});
+
 ## Multiple Handlers
 
 If there are multiple `.When(...)` setups configured for the bot, the bot will respect the `WhenHandlerMatchMode` as configured when incoming messages can be handled by more than one `.When(...)`.

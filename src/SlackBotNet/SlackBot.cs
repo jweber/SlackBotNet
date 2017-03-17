@@ -167,6 +167,11 @@ namespace SlackBotNet
 
         public IDisposable When(MessageMatcher match, HubType hubs, Action<Conversation> handler)
         {
+            bool MessageAddressesBot(Message msg) => 
+                (hubs & HubType.ObserveAllMessages) == HubType.ObserveAllMessages 
+                || msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase) 
+                || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
+
             var whenHandler = new WhenHandler(this,
                 msg =>
                 {
@@ -175,11 +180,8 @@ namespace SlackBotNet
                         return MessageMatcher.NoMatch;
 
                     if (messageHubType != HubType.DirectMessage)
-                    {
-                        bool messageAddressesBot = msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase)
-                                                   || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
-                        
-                        if (!messageAddressesBot)
+                    {                      
+                        if (!MessageAddressesBot(msg))
                             return MessageMatcher.NoMatch;
                     }
 
@@ -192,7 +194,8 @@ namespace SlackBotNet
                         this.state.GetUser(msg.User),
                         this.state.GetHubById(msg.Channel),
                         msg.Text,
-                        matches
+                        matches,
+                        MessageAddressesBot
                     );
 
                     handler(conversation);

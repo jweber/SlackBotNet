@@ -1,20 +1,20 @@
 using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SlackBotNet.Messages;
 using SlackBotNet.State;
-using SlackBotNet.Infrastructure;
 
 namespace SlackBotNet
 {
     public class Conversation
     {
         private readonly SlackBot bot;
+        private readonly Func<Message, bool> messageAddressesBot;
 
-        internal Conversation(SlackBot bot, User @from, Hub hub, string text, Match[] matches)
+        internal Conversation(SlackBot bot, User @from, Hub hub, string text, Match[] matches, Func<Message, bool> messageAddressesBot)
         {
             this.bot = bot;
+            this.messageAddressesBot = messageAddressesBot;
+
             this.From = @from;
             this.Hub = hub;
             this.Text = text;
@@ -35,10 +35,7 @@ namespace SlackBotNet
                 if (this.Hub.HubType == HubType.DirectMessage)
                     return true;
 
-                bool messageAddressesBot = msg.Text.Contains(this.bot.State.BotUserId, StringComparison.OrdinalIgnoreCase)
-                                           || msg.Text.Contains(this.bot.State.BotUsername, StringComparison.OrdinalIgnoreCase);
-
-                if (messageAddressesBot)
+                if (this.messageAddressesBot(msg))
                     return true;
 
                 return false;
@@ -49,7 +46,13 @@ namespace SlackBotNet
                 && msg.Channel == this.Hub.Id
                 && MessageAddressesBot(msg));
 
-            return new Conversation(bot, this.From, this.Hub, reply.Text, null);
+            return new Conversation(
+                this.bot, 
+                this.From, 
+                this.Hub, 
+                reply.Text, 
+                null, 
+                this.messageAddressesBot);
         }
     }
 }
