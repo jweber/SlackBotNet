@@ -175,12 +175,15 @@ namespace SlackBotNet
             var whenHandler = new WhenHandler(this,
                 msg =>
                 {
+                    if (msg.User.Equals(this.state.BotUserId))
+                        return MessageMatcher.NoMatch;
+
                     var messageHubType = this.state.GetHubById(msg.Channel).HubType;
                     if ((hubs & messageHubType) != messageHubType)
                         return MessageMatcher.NoMatch;
 
                     if (messageHubType != HubType.DirectMessage)
-                    {                      
+                    {
                         if (!MessageAddressesBot(msg))
                             return MessageMatcher.NoMatch;
                     }

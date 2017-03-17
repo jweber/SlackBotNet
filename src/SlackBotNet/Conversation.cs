@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using SlackBotNet.Messages;
 using SlackBotNet.State;
@@ -28,10 +29,13 @@ namespace SlackBotNet
 
         public async Task<Conversation> ReplyAsync(string message)
         {
-            await bot.SendAsync(this.Hub.Id, message);
+            await this.bot.SendAsync(this.Hub.Id, message);
 
             bool MessageAddressesBot(Message msg)
             {
+                if (msg.User.Equals(this.bot.State.BotUserId))
+                    return false;
+
                 if (this.Hub.HubType == HubType.DirectMessage)
                     return true;
 
