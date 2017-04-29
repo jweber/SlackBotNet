@@ -81,6 +81,26 @@ When the bot is observing a channel or group, by default it will only listen for
 	    ...
         });
 
+## Error Handling
+
+Callbacks can be registered with the bot that will be fired in the event of an unhandled exception occuring in either the MessageMatcher(s) or the conversation delegate:
+
+Example:
+
+    using static SlackBotNet.MatchFactory;
+
+    bot
+        .When(Matches.TextContaining("hello"),
+            async conv =>
+	    {
+                // exception thrown
+	    })
+	.OnException(ex =>
+	{
+            // log exception
+	});
+
+
 ## Multiple Handlers
 
 If there are multiple `.When(...)` setups configured for the bot, the bot will respect the `WhenHandlerMatchMode` as configured when incoming messages can be handled by more than one `.When(...)`.
