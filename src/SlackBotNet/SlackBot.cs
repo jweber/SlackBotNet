@@ -78,7 +78,16 @@ namespace SlackBotNet
 
                 foreach (var handler in bot.whenHandlers)
                 {
-                    var matches = await handler.MatchGenerator.Invoke(msg);
+                    var matches = new Match[0];
+                    try
+                    {
+                        matches = await handler.MatchGenerator.Invoke(msg);
+                    }
+                    catch (Exception exception)
+                    {
+                        handler.OnException(exception);
+                    }
+
                     if (matches == null)
                         continue;
 
@@ -89,9 +98,12 @@ namespace SlackBotNet
 
                     if (bot.config.WhenHandlerMatchMode == WhenHandlerMatchMode.AllMatches || bot.config.WhenHandlerMatchMode == WhenHandlerMatchMode.FirstMatch)
                     {
-                        await handler.MessageHandler(msg, matches);
+                        var (success, ex) = await handler.MessageHandler(msg, matches);
 
-                        if (bot.config.WhenHandlerMatchMode == WhenHandlerMatchMode.FirstMatch)
+                        if (ex != null)
+                            handler.OnException(ex);
+
+                        if (success && bot.config.WhenHandlerMatchMode == WhenHandlerMatchMode.FirstMatch)
                             break;
                     }
 
@@ -162,10 +174,10 @@ namespace SlackBotNet
             return this.messageBus.Observe<TMessage>().Subscribe(handler);
         }
 
-        public IDisposable When(MessageMatcher match, Action<Conversation> handler)
+        public IWhenHandler When(MessageMatcher match, Func<Conversation, Task> handler)
             => this.When(match, HubType.Channel | HubType.DirectMessage | HubType.Group, handler);
 
-        public IDisposable When(MessageMatcher match, HubType hubs, Action<Conversation> handler)
+        public IWhenHandler When(MessageMatcher match, HubType hubs, Func<Conversation, Task> handler)
         {
             bool MessageAddressesBot(Message msg) => 
                 (hubs & HubType.ObserveAllMessages) == HubType.ObserveAllMessages 
@@ -190,7 +202,7 @@ namespace SlackBotNet
 
                     return match.GetMatches(msg);
                 },
-                (msg, matches) =>
+                async (msg, matches) =>
                 {
                     var conversation = new Conversation(
                         this,
@@ -201,22 +213,31 @@ namespace SlackBotNet
                         MessageAddressesBot
                     );
 
-                    handler(conversation);
-                    return Task.CompletedTask;
+                    try
+                    {
+                        await handler(conversation);
+                        return (true, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        return (false, ex);
+                    }
                 });
 
             this.whenHandlers.Enqueue(whenHandler);
             return whenHandler;
         }
 
-        class WhenHandler : IDisposable
+        class WhenHandler : IWhenHandler
         {
+            internal event Action<Exception> OnExceptionEvt = delegate {};
+
             private readonly SlackBot bot;
 
             public WhenHandler(
                 SlackBot bot, 
                 Func<Message, Task<Match[]>> matchGenerator,
-                Func<Message, Match[], Task> messageHandler)
+                Func<Message, Match[], Task<(bool success, Exception ex)>> messageHandler)
             {
                 this.bot = bot;
                 this.MatchGenerator = matchGenerator;
@@ -224,7 +245,16 @@ namespace SlackBotNet
             }
 
             public Func<Message, Task<Match[]>> MatchGenerator { get; }
-            public Func<Message, Match[], Task> MessageHandler { get; }
+            public Func<Message, Match[], Task<(bool success, Exception ex)>> MessageHandler { get; }
+
+            internal void OnException(Exception ex)
+                => this.OnExceptionEvt(ex);
+
+            public IWhenHandler OnException(Action<Exception> handler)
+            {
+                this.OnExceptionEvt += handler;
+                return this;
+            }
 
             public void Dispose()
             {
@@ -232,6 +262,11 @@ namespace SlackBotNet
                     this.bot.whenHandlers.Where(m => m != this)
                 );
             }
+        }
+
+        public interface IWhenHandler : IDisposable
+        {
+            IWhenHandler OnException(Action<Exception> handler);
         }
 
         /// <summary>
@@ -252,9 +287,6 @@ namespace SlackBotNet
 
         #endregion
 
-        public void Dispose()
-        {
-            this.sendTimer?.Dispose();
-        }
+        public void Dispose() => this.sendTimer?.Dispose();
     }
 }
