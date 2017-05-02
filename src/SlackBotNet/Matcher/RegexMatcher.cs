@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SlackBotNet.Messages;
@@ -17,19 +18,30 @@ namespace SlackBotNet.Matcher
 
         public override Task<Match[]> GetMatches(Message message)
         {
-            var match = this.regex.Match(message.Text);
-            if (!match.Success)
+            var matches = this.regex.Matches(message.Text);
+
+            if (matches.Count == 0)
                 return NoMatch;
 
             var result = new List<Match>();
 
-            GroupCollection collection = match.Groups;
-            for (int i = 0; i < collection.Count; i++)
+            foreach (System.Text.RegularExpressions.Match match in matches)
             {
-                var group = collection[i];
-                string name = this.regex.GroupNameFromNumber(i);
-                result.Add(new Match(group.Value, name ?? group.Index.ToString(), 1));
+                if (!match.Success)
+                    continue;
+
+                GroupCollection collection = match.Groups;
+                for (int i = 0; i < collection.Count; i++)
+                {
+                    var group = collection[i];
+                    string name = this.regex.GroupNameFromNumber(i);
+
+                    result.Add(new Match(group.Value, name ?? group.Index.ToString(), 1));
+                }
             }
+
+            if (!result.Any())
+                return NoMatch;
 
             return Task.FromResult(result.ToArray());
         }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Tasks;
 using SlackBotNet.Matcher;
 using SlackBotNet.Messages;
@@ -18,6 +19,7 @@ namespace SlackBotNet
         public static bool operator false(MessageMatcher m) => false;
     }
 
+    [DebuggerDisplay("{Text} [Score: {Score}] [Category: {Category}]")]
     public class Match
     {
         public Match(string text)
