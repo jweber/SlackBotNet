@@ -31,7 +31,6 @@ namespace SlackBotNet
                 .Publish()
                 .RefCount();
         } 
-            
 
         public void Publish<TMessage>(TMessage message)
             => this.subject.OnNext(message);

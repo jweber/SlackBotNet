@@ -1,9 +1,10 @@
-﻿using SlackBotNet.State;
+﻿using System;
+using SlackBotNet.State;
 using System.Threading.Tasks;
 
 namespace SlackBotNet.Drivers
 {
-    internal interface IDriver
+    internal interface IDriver : IDisposable
     {
         Task<SlackBotState> ConnectAsync(string slackToken, IMessageBus bus);
         Task DisconnectAsync();

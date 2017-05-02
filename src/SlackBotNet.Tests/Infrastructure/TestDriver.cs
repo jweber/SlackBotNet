@@ -29,5 +29,9 @@ namespace SlackBotNet.Tests.Infrastructure
         {
             return Task.CompletedTask;
         }
+
+        public void Dispose()
+        {
+        }
     }
 }

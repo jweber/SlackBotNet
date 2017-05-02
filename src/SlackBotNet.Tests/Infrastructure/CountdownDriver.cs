@@ -37,5 +37,7 @@ namespace SlackBotNet.Tests.Infrastructure
             this.countdown.Signal();
             return Task.CompletedTask;
         }
+
+        public void Dispose() => this.countdown.Dispose();
     }
 }

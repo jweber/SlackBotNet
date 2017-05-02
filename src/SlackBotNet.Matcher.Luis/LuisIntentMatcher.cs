@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,13 +10,16 @@ namespace SlackBotNet.Matcher
 {
     internal class LuisIntentMatcher : MessageMatcher
     {
+        private static readonly ConcurrentDictionary<string, Task<(DateTimeOffset added, LuisResponse response)>> LuisResponseCache
+            = new ConcurrentDictionary<string, Task<(DateTimeOffset added, LuisResponse response)>>(StringComparer.OrdinalIgnoreCase);
+
         private readonly string intentName;
         private readonly decimal confidenceThreshold;
 
         private static readonly HttpClient HttpClient = new HttpClient();
 
         private const string Url =
-            "https://api.projectoxford.ai/luis/v2.0/apps/{0}?subscription-key={1}&verbose=false&q={2}";
+            "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/{0}?subscription-key={1}&timezoneOffset=0&verbose=false&q={2}";
 
         public LuisIntentMatcher(string intentName, decimal confidenceThreshold = 0.9m)
         {
@@ -23,26 +27,62 @@ namespace SlackBotNet.Matcher
             this.confidenceThreshold = confidenceThreshold;
         }
 
-        public override async Task<Match[]> GetMatches(Message message)
+        private LuisResponse GetLuisResponse(string message)
+        {
+            async Task<(DateTimeOffset, LuisResponse)> MakeLuisRequest()
+            {
+                var requestUrl = string.Format(Url,
+                    LuisConfig.AppKey,
+                    LuisConfig.SubscriptionKey,
+                    message);
+
+                var response = await HttpClient.GetAsync(new Uri(requestUrl));
+                if (!response.IsSuccessStatusCode)
+                    throw new HttpRequestException($"LUIS call failed. Response code was {response.StatusCode}: {response.ReasonPhrase}");
+
+                var result = await response.Content.ReadAsStringAsync();
+
+                var dto = JsonConvert.DeserializeObject<LuisResponse>(result);
+
+                if (dto.TopScoringIntent == null || dto.Entities == null)
+                    throw new Exception($"Response from LUIS did not deserialize as expected. Response was: {result}");
+
+                return (DateTimeOffset.UtcNow, dto);
+            }
+
+            // trim cache
+            if (LuisResponseCache.Count >= LuisConfig.CacheSize)
+            {
+                var expiredKeys = LuisResponseCache
+                    .Where(m => !m.Key.Equals(message, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(m => m.Value.Result.added)
+                    .Take(LuisResponseCache.Count - LuisConfig.CacheSize + 1)
+                    .Select(m => m.Key);
+
+                foreach (var key in expiredKeys)
+                    LuisResponseCache.TryRemove(key, out var _);
+            }
+
+            return LuisResponseCache.GetOrAdd(message, _ => MakeLuisRequest()).Result.response;
+        }
+
+        public override Task<Match[]> GetMatches(Message message)
         {
             if (!LuisConfig.Configured)
                 return null;
 
-            var requestUrl = string.Format(Url,
-                LuisConfig.AppKey,
-                LuisConfig.SubscriptionKey,
-                message.Text);
-
-            var result = await HttpClient.GetStringAsync(new Uri(requestUrl));
-            var dtoResponse = JsonConvert.DeserializeObject<LuisResponse>(result);
-
-            var passesThreshold = dtoResponse.TopScoringIntent.Score >= this.confidenceThreshold;
-            var matchesIntent = dtoResponse.TopScoringIntent.Intent.Equals(this.intentName,
+            var response = this.GetLuisResponse(message.Text);
+            
+            var passesThreshold = response.TopScoringIntent.Score >= this.confidenceThreshold;
+            var matchesIntent = response.TopScoringIntent.Intent.Equals(this.intentName,
                 StringComparison.OrdinalIgnoreCase);
 
             if (passesThreshold && matchesIntent)
             {
-                return dtoResponse.Entities.Select(m => new Match(m.Entity, m.Type, m.Score)).ToArray();
+                return Task.FromResult(
+                    response.Entities
+                        .Select(m => new Match(m.Entity, m.Type, m.Score))
+                        .ToArray());
             }
 
             return null;
