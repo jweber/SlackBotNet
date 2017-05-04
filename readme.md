@@ -95,7 +95,7 @@ Example:
 	    {
                 // exception thrown
 	    })
-	.OnException(ex =>
+	.OnException((msg, ex) =>
 	{
             // log exception
 	});

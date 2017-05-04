@@ -85,7 +85,7 @@ namespace SlackBotNet
                     }
                     catch (Exception exception)
                     {
-                        handler.OnException(exception);
+                        handler.OnException(msg, exception);
                     }
 
                     if (matches == null)
@@ -101,7 +101,7 @@ namespace SlackBotNet
                         var (success, ex) = await handler.MessageHandler(msg, matches);
 
                         if (ex != null)
-                            handler.OnException(ex);
+                            handler.OnException(msg, ex);
 
                         if (success && bot.config.WhenHandlerMatchMode == WhenHandlerMatchMode.FirstMatch)
                             break;
@@ -230,7 +230,7 @@ namespace SlackBotNet
 
         class WhenHandler : IWhenHandler
         {
-            internal event Action<Exception> OnExceptionEvt = delegate {};
+            internal event Action<Message, Exception> OnExceptionEvt = delegate {};
 
             private readonly SlackBot bot;
 
@@ -247,10 +247,10 @@ namespace SlackBotNet
             public Func<Message, Task<Match[]>> MatchGenerator { get; }
             public Func<Message, Match[], Task<(bool success, Exception ex)>> MessageHandler { get; }
 
-            internal void OnException(Exception ex)
-                => this.OnExceptionEvt(ex);
+            internal void OnException(Message message, Exception ex)
+                => this.OnExceptionEvt(message, ex);
 
-            public IWhenHandler OnException(Action<Exception> handler)
+            public IWhenHandler OnException(Action<Message, Exception> handler)
             {
                 this.OnExceptionEvt += handler;
                 return this;
@@ -266,7 +266,7 @@ namespace SlackBotNet
 
         public interface IWhenHandler : IDisposable
         {
-            IWhenHandler OnException(Action<Exception> handler);
+            IWhenHandler OnException(Action<Message, Exception> handler);
         }
 
         /// <summary>

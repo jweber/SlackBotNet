@@ -333,7 +333,7 @@ namespace SlackBotNet.Tests
 
             bot
                 .When(Matches.TextContaining("hello"), c => throw new Exception("exception message"))
-                .OnException(ex =>
+                .OnException((msg, ex) =>
                 {
                     Assert.Equal("exception message", ex.Message);
                     evt.Set();
@@ -374,7 +374,7 @@ namespace SlackBotNet.Tests
 
             bot
                 .When(new ExceptionThrowingMatcher(() => new Exception("exception message")), c => Task.CompletedTask)
-                .OnException(ex =>
+                .OnException((msg, ex) =>
                 {
                     Assert.Equal("exception message", ex.Message);
                     evt.Set();
