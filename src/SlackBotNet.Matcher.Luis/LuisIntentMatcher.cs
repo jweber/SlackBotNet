@@ -69,7 +69,7 @@ namespace SlackBotNet.Matcher
         public override Task<Match[]> GetMatches(Message message)
         {
             if (!LuisConfig.Configured)
-                return null;
+                return NoMatch;
 
             var response = this.GetLuisResponse(message.Text);
             
@@ -85,7 +85,7 @@ namespace SlackBotNet.Matcher
                         .ToArray());
             }
 
-            return null;
+            return NoMatch;
         }
 
         public class LuisResponse
