@@ -68,7 +68,7 @@ namespace SlackBotNet.Matcher
 
         public override Task<Match[]> GetMatches(Message message)
         {
-            if (!LuisConfig.Configured)
+            if (!LuisConfig.Configured || string.IsNullOrWhiteSpace(message.Text))
                 return NoMatch;
 
             var response = this.GetLuisResponse(message.Text);

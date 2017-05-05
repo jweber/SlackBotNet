@@ -18,6 +18,9 @@ namespace SlackBotNet.Matcher
 
         public override Task<Match[]> GetMatches(Message message)
         {
+            if (message.Text == null)
+                return NoMatch;
+
             var matches = this.regex.Matches(message.Text);
 
             if (matches.Count == 0)

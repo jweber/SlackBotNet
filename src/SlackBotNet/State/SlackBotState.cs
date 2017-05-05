@@ -23,7 +23,7 @@ namespace SlackBotNet.State
             => this.users[id] = new User(id, username);
 
         public User GetUser(string id)
-            => this.users.ContainsKey(id) ? this.users[id] : null;
+            => id != null && this.users.ContainsKey(id) ? this.users[id] : null;
 
         public User[] GetUsers()
             => this.users.Values.ToArray();

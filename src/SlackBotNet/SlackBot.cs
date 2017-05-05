@@ -88,7 +88,7 @@ namespace SlackBotNet
                         handler.OnException(msg, exception);
                     }
 
-                    if (matches == null)
+                    if (matches == null || !matches.Any())
                         continue;
 
                     decimal score = matches.Sum(m => m.Score);
@@ -187,7 +187,7 @@ namespace SlackBotNet
             var whenHandler = new WhenHandler(this,
                 msg =>
                 {
-                    if (msg.User.Equals(this.state.BotUserId))
+                    if (msg.User != null && msg.User.Equals(this.state.BotUserId))
                         return MessageMatcher.NoMatch;
 
                     var messageHubType = this.state.GetHubById(msg.Channel).HubType;
