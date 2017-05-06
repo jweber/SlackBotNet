@@ -88,7 +88,7 @@ namespace SlackBotNet
                         handler.OnException(msg, exception);
                     }
 
-                    if (matches == null || !matches.Any())
+                    if (matches == null)
                         continue;
 
                     decimal score = matches.Sum(m => m.Score);
