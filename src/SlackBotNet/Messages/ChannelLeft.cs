@@ -15,6 +15,6 @@ namespace SlackBotNet.Messages
         [JsonProperty("event_ts")]
         public string ChanelTimestamp { get; set; }
 
-        public DateTimeOffset EventTimestamp => this.ChanelTimestamp.FromChannelTimestamp();
+        public DateTimeOffset EventTimestamp => this.ChanelTimestamp.FromRawTimestamp();
     }
 }

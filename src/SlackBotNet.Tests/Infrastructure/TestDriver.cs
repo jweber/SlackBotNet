@@ -2,6 +2,7 @@
 using System;
 using SlackBotNet.State;
 using System.Threading.Tasks;
+using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Tests.Infrastructure
 {
@@ -15,7 +16,7 @@ namespace SlackBotNet.Tests.Infrastructure
             this.state = state;
         }
 
-        public Task<SlackBotState> ConnectAsync(string slackToken, IMessageBus bus)
+        public Task<SlackBotState> ConnectAsync(IMessageBus bus)
         {
             return Task.FromResult(this.state);
         }
@@ -25,7 +26,7 @@ namespace SlackBotNet.Tests.Infrastructure
             return Task.CompletedTask;
         }
 
-        public Task SendMessageAsync(string message)
+        public Task SendMessageAsync(PostMessage message)
         {
             return Task.CompletedTask;
         }

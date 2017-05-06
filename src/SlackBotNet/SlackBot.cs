@@ -9,6 +9,7 @@ using SlackBotNet.Messages;
 using SlackBotNet.State;
 using SlackBotNet.Drivers;
 using SlackBotNet.Infrastructure;
+using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet
 {
@@ -42,14 +43,14 @@ namespace SlackBotNet
         public IReadOnlyState State => this.state;
 
         public static Task<SlackBot> InitializeAsync(string slackToken, Action<ISlackBotConfig> config = null)
-            => InitializeAsync(slackToken, new SlackRtmDriver(), new RxMessageBus(), config);
+            => InitializeAsync(slackToken, new SlackRtmDriver(slackToken), new RxMessageBus(), config);
 
         internal static async Task<SlackBot> InitializeAsync(string slackToken, IDriver driver, IMessageBus bus, Action<ISlackBotConfig> config = null)
         {
             var defaultConfig = new DefaultSlackBotConfig();
             config?.Invoke(defaultConfig);
 
-            var state = await driver.ConnectAsync(slackToken, bus);
+            var state = await driver.ConnectAsync(bus);
 
             var bot = new SlackBot(state, driver, bus, defaultConfig);
             bot.StartSendListener();
@@ -120,7 +121,7 @@ namespace SlackBotNet
 
         #region Send
 
-        private readonly ConcurrentQueue<string> messageQueue = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<PostMessage> messageQueue = new ConcurrentQueue<PostMessage>();
 
         /// <summary>
         /// Limits outgoing messages to 1/second
@@ -131,30 +132,19 @@ namespace SlackBotNet
                 .Timer(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1))
                 .Subscribe(async _ =>
                 {
-                    if (this.messageQueue.TryDequeue(out string message))
+                    if (this.messageQueue.TryDequeue(out PostMessage message))
                     {
                         await this.driver.SendMessageAsync(message);
                     }
                });
         }
 
-        public Task SendAsync(Hub hub, string message)
-            => this.SendAsync(hub.Id, message);
+        public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
+            => this.SendAsync(hub.Id, message, attachments);
 
-        public Task SendAsync(string channel, string message)
+        public Task SendAsync(string channel, string message, params Attachment[] attachments)
         {
-            var msg = new
-            {
-                id = Guid.NewGuid().GetHashCode(),
-                type = "message",
-                channel = channel,
-                text = this.EncodeMessage(message)
-            };
-
-            var json = JsonConvert.SerializeObject(msg,
-                new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-
-            this.messageQueue.Enqueue(json);
+            this.messageQueue.Enqueue(new PostMessage(channel, message, attachments));
             return Task.CompletedTask;
         }
 

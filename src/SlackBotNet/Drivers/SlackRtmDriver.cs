@@ -6,6 +6,9 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Drivers
 {
@@ -15,9 +18,23 @@ namespace SlackBotNet.Drivers
 
         private ClientWebSocket websocket;
 
-        public async Task<SlackBotState> ConnectAsync(string slackToken, IMessageBus bus)
+        private readonly string slackToken;
+        private readonly JsonSerializerSettings serializerSettings;
+        
+        public SlackRtmDriver(string slackToken)
         {
-            var json = await HttpClient.GetStringAsync($"https://slack.com/api/rtm.start?token={slackToken}");
+            this.slackToken = slackToken;
+
+            this.serializerSettings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
+        }
+
+        public async Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        {
+            var json = await HttpClient.GetStringAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
             var jData = JObject.Parse(json);
 
             string websocketUrl = jData["url"].Value<string>();
@@ -43,13 +60,34 @@ namespace SlackBotNet.Drivers
             this.websocket.Dispose();
         }
 
-        public Task SendMessageAsync(string message)
+        public Task SendMessageAsync(PostMessage message)
+            => this.SendMessageOverWebApi(message);
+
+        private Task SendMessageOverRtmAsync(PostMessage message)
         {
             return this.websocket.SendAsync(
-                new ArraySegment<byte>(Encoding.UTF8.GetBytes(message)),
+                new ArraySegment<byte>(Encoding.UTF8.GetBytes(message.Text)),
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
+        }
+
+        private async Task<PostMessageResponse> SendMessageOverWebApi(PostMessage message)
+        {
+            string postUrl = $"https://slack.com/api/chat.postMessage?token={this.slackToken}";
+
+            var requestContent = message.ToKeyValuePairs();
+
+            var response = await HttpClient.PostAsync(postUrl, new FormUrlEncodedContent(requestContent));
+
+            var content = await response.Content.ReadAsStringAsync();
+            var parsedContent = JObject.Parse(content);
+            bool isOk = parsedContent["ok"].Value<bool>();
+
+            if (!response.IsSuccessStatusCode || !isOk)
+                throw new HttpRequestException(content);
+
+            return JsonConvert.DeserializeObject<PostMessageResponse>(content);
         }
 
         private async Task Listen(IMessageBus bus)

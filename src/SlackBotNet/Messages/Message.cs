@@ -15,7 +15,7 @@ namespace SlackBotNet.Messages
         public string ChannelTimestamp { get; set; }
 
         public DateTimeOffset Timestamp 
-            => this.ChannelTimestamp.FromChannelTimestamp();
+            => this.ChannelTimestamp.FromRawTimestamp();
 
         public bool Hidden { get; set; }
 

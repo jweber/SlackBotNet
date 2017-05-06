@@ -23,7 +23,7 @@ namespace SlackBotNet.Messages.Subtypes
         [JsonProperty("last_read")]
         public string LastRead { get; set; }
 
-        public DateTimeOffset LastReadTimestamp => this.LastRead.FromChannelTimestamp();
+        public DateTimeOffset LastReadTimestamp => this.LastRead.FromRawTimestamp();
 
         public Message Latest { get; set; }
 

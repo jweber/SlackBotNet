@@ -65,7 +65,7 @@ namespace SlackBotNet.Tests
             evt.Wait(TimeSpan.FromMilliseconds(1200));
 
             Assert.True(
-                driver.RecordedMessages[0].Contains($"test {enc} test")
+                driver.RecordedMessages[0].Text.Contains($"test {enc} test")
             );
         }
     }

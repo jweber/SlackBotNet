@@ -1,7 +1,7 @@
 using System;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using SlackBotNet.Messages;
+using SlackBotNet.Messages.WebApi;
 using SlackBotNet.State;
 
 namespace SlackBotNet
@@ -27,9 +27,9 @@ namespace SlackBotNet
         public string Text { get; }
         public Match[] Matches { get; }
 
-        public async Task<Conversation> ReplyAsync(string message)
+        public async Task<Conversation> ReplyAsync(string message, params Attachment[] attachments)
         {
-            await this.bot.SendAsync(this.Hub.Id, message);
+            await this.bot.SendAsync(this.Hub.Id, message, attachments);
 
             bool MessageAddressesBot(Message msg)
             {
@@ -45,7 +45,7 @@ namespace SlackBotNet
                 return false;
             }
 
-            var reply = await bot.Linger<Message>(@where: msg => 
+            var reply = await this.bot.Linger<Message>(@where: msg => 
                 msg.User == this.From.Id 
                 && msg.Channel == this.Hub.Id
                 && MessageAddressesBot(msg));

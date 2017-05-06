@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using SlackBotNet.Matcher;
 using SlackBotNet.Messages;
 
@@ -7,6 +8,7 @@ namespace SlackBotNet
 {
     public abstract class MessageMatcher
     {
+        [NotNull]
         public abstract Task<Match[]> GetMatches(Message message);
 
         public static Task<Match[]> NoMatch => Task.FromResult((Match[])null);
