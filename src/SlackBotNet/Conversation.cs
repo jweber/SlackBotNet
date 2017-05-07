@@ -11,7 +11,7 @@ namespace SlackBotNet
     public interface IConversation : IDisposable
     {
         Task PostMessage(string message, params Attachment[] attachments);
-        Task<IReply> WaitForReply(MessageMatcher match = null);
+        Task<IReply> WaitForReply(MessageMatcher match = null, Action <Message> onNotMatch = null);
         void End();
     }
 
@@ -79,7 +79,7 @@ namespace SlackBotNet
             return this.bot.SendAsync(this.rootMessage.Channel, message, attachments);
         }
 
-        public async Task<IReply> WaitForReply(MessageMatcher match = null)
+        public async Task<IReply> WaitForReply(MessageMatcher match = null, Action<Message> onNotMatch = null)
         {
             if (this.tokenSource.IsCancellationRequested)
                 return null;
@@ -102,6 +102,9 @@ namespace SlackBotNet
 
                 var (matchSuccess, results) = this.MessageMatches(msg, match).GetAwaiter().GetResult();
                 matches = results;
+
+                if (!matchSuccess)
+                    onNotMatch?.Invoke(msg);
 
                 return matchSuccess;
             });
