@@ -8,6 +8,7 @@ namespace SlackBotNet.State
         Channel = 1,
         Group = 2,
         DirectMessage = 4,
-        ObserveAllMessages = 8
+
+        All = Channel | Group | DirectMessage
     }
 }

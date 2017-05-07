@@ -115,7 +115,8 @@ namespace SlackBotNet.Messages.WebApi
             if (render(this.Text)) yield return kvp("text", this.Text);
             if (render(this.Parse)) yield return kvp("parse", this.Parse?.ToString());
             if (render(this.LinkNames)) yield return kvpb("link_names", this.LinkNames);
-            if (render(this.Attachments)) yield return kvp("attachments", this.Attachments.Any() ? JsonConvert.SerializeObject(this.Attachments, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }) : null);
+            if (render(this.Attachments) && this.Attachments.Any())
+                yield return kvp("attachments", JsonConvert.SerializeObject(this.Attachments, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
             if (render(this.UnfurlLinks)) yield return kvpb("unfurl_links", this.UnfurlLinks);
             if (render(this.UnfurlMedia)) yield return kvpb("unfurl_media", this.UnfurlMedia);
             if (render(this.Username)) yield return kvp("username", this.Username);

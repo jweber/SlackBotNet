@@ -23,5 +23,11 @@ namespace SlackBotNet.Messages
 
         [JsonProperty("reply_to")]
         public string ReplyTo { get; set; }
+
+        [JsonProperty("thread_ts")]
+        public string RawThreadTimestamp { get; set; }
+
+        public DateTimeOffset ThreadTimestamp
+            => this.RawThreadTimestamp.FromRawTimestamp();
     }
 }

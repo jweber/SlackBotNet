@@ -148,11 +148,20 @@ namespace SlackBotNet
             return Task.CompletedTask;
         }
 
-        private string EncodeMessage(string message)
-            => message
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;");
+        public Task ReplyAsync(Hub hub, string message, Message replyTo, params Attachment[] attachments)
+            => this.ReplyAsync(hub.Id, message, replyTo, attachments);
+
+        public Task ReplyAsync(string channel, string message, Message replyTo, params Attachment[] attachments)
+        {
+            var ts = !string.IsNullOrEmpty(replyTo.RawThreadTimestamp)
+                ? replyTo.RawThreadTimestamp
+                : replyTo.ChannelTimestamp;
+
+            this.QueueForSending(new PostMessage(channel, message, attachments) { ThreadTimestamp = ts });
+            return Task.CompletedTask;
+        }
+
+        private void QueueForSending(PostMessage message) => this.messageQueue.Enqueue(message);
 
         #endregion
 
@@ -164,13 +173,19 @@ namespace SlackBotNet
             return this.messageBus.Observe<TMessage>().Subscribe(handler);
         }
 
-        public IWhenHandler When(MessageMatcher match, Func<Conversation, Task> handler)
-            => this.When(match, HubType.Channel | HubType.DirectMessage | HubType.Group, handler);
+        public IWhenHandler When(MessageMatcher match, Func<IConversation, Task> handler)
+            => this.When(match, HubType.All, Modes.None, handler);
 
-        public IWhenHandler When(MessageMatcher match, HubType hubs, Func<Conversation, Task> handler)
+        public IWhenHandler When(MessageMatcher match, HubType hubs, Func<IConversation, Task> handler)
+            => this.When(match, hubs, Modes.None, handler);
+
+        public IWhenHandler When(MessageMatcher match, Modes modes, Func<IConversation, Task> handler)
+            => this.When(match, HubType.All, modes, handler);
+
+        public IWhenHandler When(MessageMatcher match, HubType hubs, Modes modes, Func<IConversation, Task> handler)
         {
             bool MessageAddressesBot(Message msg) => 
-                (hubs & HubType.ObserveAllMessages) == HubType.ObserveAllMessages 
+                (modes & Modes.ObserveAllMessages) == Modes.ObserveAllMessages 
                 || msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase) 
                 || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
 
@@ -194,23 +209,23 @@ namespace SlackBotNet
                 },
                 async (msg, matches) =>
                 {
-                    var conversation = new Conversation(
-                        this,
-                        this.state.GetUser(msg.User),
-                        this.state.GetHubById(msg.Channel),
-                        msg.Text,
-                        matches,
-                        MessageAddressesBot
-                    );
+                    var modesCopy = modes;
 
-                    try
+                    // Conversation being initiated from another thread? force threaded mode
+                    if (msg.RawThreadTimestamp != null)
+                        modesCopy |= Modes.StartThread;
+
+                    using (var conversation = new Conversation(this, modesCopy, msg, matches))
                     {
-                        await handler(conversation);
-                        return (true, null);
-                    }
-                    catch (Exception ex)
-                    {
-                        return (false, ex);
+                        try
+                        {
+                            await handler(conversation);
+                            return (true, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            return (false, ex);
+                        }
                     }
                 });
 

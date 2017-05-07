@@ -29,9 +29,9 @@ namespace SlackBotNet.Tests
 
             var bot = await SlackBot.InitializeAsync("", driver, this.bus);
 
-            await bot.SendAsync("test", "test");
-            await bot.SendAsync("test", "test");
-            await bot.SendAsync("test", "test");
+            await bot.SendAsync("test", "test", null);
+            await bot.SendAsync("test", "test", null);
+            await bot.SendAsync("test", "test", null);
 
             if (!evt.Wait(TimeSpan.FromSeconds(4)))
                 Assert.True(false, "3 messages were not recorded as being sent");
@@ -60,7 +60,7 @@ namespace SlackBotNet.Tests
 
             var bot = await SlackBot.InitializeAsync("", driver, this.bus);
 
-            await bot.SendAsync("test", $"test {unenc} test");
+            await bot.SendAsync("test", $"test {unenc} test", null);
 
             evt.Wait(TimeSpan.FromMilliseconds(1200));
 

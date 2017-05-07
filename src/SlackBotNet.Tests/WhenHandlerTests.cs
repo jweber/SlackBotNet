@@ -274,7 +274,7 @@ namespace SlackBotNet.Tests
 
             bot.When(
                 Matches.TextContaining("hello"),
-                HubType.Channel | HubType.ObserveAllMessages,
+                HubType.Channel, Modes.ObserveAllMessages,
                 c =>
                 {
                     evt.Set();
