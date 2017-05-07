@@ -33,5 +33,8 @@ namespace SlackBotNet
 
         public static MessageMatcher Or(this MessageMatcher left, MessageMatcher right)
             => new OrMatcher(left, right);
+
+        public static MessageMatcher And(this MessageMatcher left, MessageMatcher right)
+            => new AndMatcher(left, right);
     }
 }
