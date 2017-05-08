@@ -10,6 +10,11 @@ namespace SlackBotNet
 {
     public interface IConversation : IDisposable
     {
+        User From { get; }
+        Hub Hub { get; }
+        string Text { get; }
+        Match[] Matches { get; }
+
         /// <summary>
         /// Sends a message to the channel that the bot is listening on.
         /// </summary>
