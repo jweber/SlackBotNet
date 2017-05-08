@@ -33,6 +33,16 @@ namespace SlackBotNet
             => new TextMatcher(text);
 
         /// <summary>
+        /// Returns success if any of the strings defined in <paramref name="text"/>
+        /// exist as a case-insensitive substring of the message text.
+        /// </summary>
+        /// <param name="_"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        public static MessageMatcher Any(this IMatchExt _, params string[] text)
+            => new AnyOfMatcher(text);
+
+        /// <summary>
         /// Returns success if the regex <paramref name="pattern"/> matches the message text.
         /// </summary>
         /// <param name="_"></param>
