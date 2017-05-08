@@ -5,7 +5,7 @@ namespace SlackBotNet.State
     [DebuggerDisplay("{" + nameof(Name) + "}")]
     public class Hub
     {
-        public Hub(string id, string name, HubType hubType)
+        internal Hub(string id, string name, HubType hubType)
         {
             this.Id = id;
             this.HubType = hubType;

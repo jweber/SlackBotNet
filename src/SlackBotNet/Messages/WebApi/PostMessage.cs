@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -34,25 +35,30 @@ namespace SlackBotNet.Messages.WebApi
 
         public PostMessage(string channel)
         {
+            if (string.IsNullOrWhiteSpace(channel))
+                throw new ArgumentNullException(nameof(channel));
+
             this.Channel = channel;
         }
 
         public PostMessage(string channel, string text)
+            : this(channel)
         {
-            this.Channel = channel;
+            if (string.IsNullOrEmpty(text))
+                throw new ArgumentNullException(nameof(text));
+
             this.Text = text;
         }
 
         public PostMessage(string channel, params Attachment[] attachments)
+            : this(channel)
         {
-            this.Channel = channel;
             this.Attachments = attachments;
         }
 
         public PostMessage(string channel, string text, params Attachment[] attachments)
+            : this(channel, text)
         {
-            this.Channel = channel;
-            this.Text = text;
             this.Attachments = attachments;
         }
 
@@ -110,8 +116,7 @@ namespace SlackBotNet.Messages.WebApi
 
             KeyValuePair<string, string> kvpb(string name, bool? value) => kvp(name, value?.ToString().ToLower());
             
-            yield return kvp("channel", this.Channel);
-
+            if (render(this.Channel)) yield return kvp("channel", this.Channel);
             if (render(this.Text)) yield return kvp("text", this.Text);
             if (render(this.Parse)) yield return kvp("parse", this.Parse?.ToString());
             if (render(this.LinkNames)) yield return kvpb("link_names", this.LinkNames);

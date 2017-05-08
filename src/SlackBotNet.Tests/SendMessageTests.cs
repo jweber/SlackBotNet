@@ -1,8 +1,10 @@
 ﻿using SlackBotNet.State;
 using SlackBotNet.Tests.Infrastructure;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SlackBotNet.Messages.WebApi;
 using Xunit;
 
 namespace SlackBotNet.Tests
@@ -53,20 +55,15 @@ namespace SlackBotNet.Tests
         [InlineData('&', "&amp;")]
         [InlineData('<', "&lt;")]
         [InlineData('>', "&gt;")]
-        public async Task MessageIsEncoded(char unenc, string enc)
+        public void MessageIsEncoded(char unenc, string enc)
         {
-            var evt = new CountdownEvent(1);
-            var driver = new CountdownDriver(evt);
+            var message = new PostMessage("channel", $"test {unenc} test");
 
-            var bot = await SlackBot.InitializeAsync("", driver, this.bus);
+            var result = message
+                .ToKeyValuePairs()
+                .First(m => m.Key == "text");
 
-            await bot.SendAsync("test", $"test {unenc} test", null);
-
-            evt.Wait(TimeSpan.FromMilliseconds(1200));
-
-            Assert.True(
-                driver.RecordedMessages[0].Text.Contains($"test {enc} test")
-            );
+            Assert.Equal($"test {enc} test", result.Value);
         }
     }
 }

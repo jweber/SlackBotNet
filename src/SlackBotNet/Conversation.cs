@@ -10,8 +10,28 @@ namespace SlackBotNet
 {
     public interface IConversation : IDisposable
     {
+        /// <summary>
+        /// Sends a message to the channel that the bot is listening on.
+        /// </summary>
+        /// <param name="message">The message text. Emoji and markdown are supported.</param>
+        /// <param name="attachments">Optional list of attachments to add to the message.</param>
+        /// <returns></returns>
         Task PostMessage(string message, params Attachment[] attachments);
+
+        /// <summary>
+        /// Tells the bot to wait until a message comes in that meets the following criteria:
+        /// <para>1. If the bot is conversing directly in a channel, another message is posted by original User that triggered the bot</para>
+        /// <para>2. If the bot is conversing in a thread, any message posted in that thread will be looked at</para>
+        /// <para>3. If a <paramref name="match"/> is defined, the message must pass the matcher(s).</para>
+        /// </summary>
+        /// <param name="match">Criteria that the message must meet</param>
+        /// <param name="onNotMatch">If a message does not meet the <paramref name="match"/> criteria, this action is invoked.</param>
+        /// <returns></returns>
         Task<IReply> WaitForReply(MessageMatcher match = null, Action <Message> onNotMatch = null);
+
+        /// <summary>
+        /// Ends the conversation.
+        /// </summary>
         void End();
     }
 
@@ -99,6 +119,9 @@ namespace SlackBotNet
 
                 if (!preconditionsMatch)
                     return false;
+
+                if (match == null)
+                    return true;
 
                 var (matchSuccess, results) = this.MessageMatches(msg, match).GetAwaiter().GetResult();
                 matches = results;
