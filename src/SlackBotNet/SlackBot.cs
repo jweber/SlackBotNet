@@ -147,8 +147,28 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
-            => this.SendAsync(hub.Id, message, attachments);
+            => this.SendAsync(hub.Id, message, attachments);        /// <summary>
+        
+            /// Posts a message to the <paramref name="hub"/>.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(Hub hub, params Attachment[] attachments)
+            => this.SendAsync(hub.Id, attachments);
 
+        /// <summary>
+        /// Posts a message to the <paramref name="channelId"/>.
+        /// </summary>
+        /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(string channelId, params Attachment[] attachments)
+        {
+            this.messageQueue.Enqueue(new PostMessage(channelId, attachments));
+            return Task.CompletedTask;
+        }
+        
         /// <summary>
         /// Posts a message to the <paramref name="channelId"/>.
         /// </summary>
@@ -172,8 +192,36 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task ReplyAsync(Hub hub, string message, Message replyTo, params Attachment[] attachments)
-            => this.ReplyAsync(hub.Id, message, replyTo, attachments);
+            => this.ReplyAsync(hub.Id, message, replyTo, attachments);        /// <summary>
+        
+        /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="replyTo"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(Hub hub, Message replyTo, params Attachment[] attachments)
+            => this.ReplyAsync(hub.Id, replyTo, attachments);
 
+        /// <summary>
+        /// Posts a message to a thread in the <paramref name="channelId"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="replyTo"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(string channelId, Message replyTo, params Attachment[] attachments)
+        {
+            var ts = !string.IsNullOrEmpty(replyTo.RawThreadTimestamp)
+                ? replyTo.RawThreadTimestamp
+                : replyTo.ChannelTimestamp;
+
+            this.QueueForSending(new PostMessage(channelId, attachments) { ThreadTimestamp = ts });
+            return Task.CompletedTask;
+        }
+        
         /// <summary>
         /// Posts a message to a thread in the <paramref name="channelId"/>. If the thread is not already
         /// started then it is created.
