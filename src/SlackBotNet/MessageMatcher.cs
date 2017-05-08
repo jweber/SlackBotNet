@@ -13,12 +13,21 @@ namespace SlackBotNet
 
         public static Task<Match[]> NoMatch => Task.FromResult((Match[])null);
 
-        public static MessageMatcher operator | (MessageMatcher left, MessageMatcher right)
+        public static MessageMatcher operator |(MessageMatcher left, MessageMatcher right)
             => new OrMatcher(left, right);
+
+        public static MessageMatcher operator &(MessageMatcher left, MessageMatcher right)
+            => new AndMatcher(left, right);
 
         // Always evaluate to false to force both sides to be evaluated
         public static bool operator true(MessageMatcher m) => false;
         public static bool operator false(MessageMatcher m) => false;
+
+        /// <summary>
+        /// Implicit conversion of <see cref="string"/> -> <see cref="TextMatcher"/>
+        /// </summary>
+        /// <param name="text"></param>
+        public static implicit operator MessageMatcher(string text) => new TextMatcher(text);
     }
 
     [DebuggerDisplay("{Text} [Score: {Score}] [Category: {Category}]")]

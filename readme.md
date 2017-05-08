@@ -18,7 +18,7 @@ Listen for messages sent to the bot:
 
     using static SlackBotNet.MatchFactory;
 
-    bot.When(Matches.TextContaining("hello"), async conv =>
+    bot.When(Matches.Text("hello"), async conv =>
     {
         await conv.ReplyAsync($"Hi {conv.From.Username}!");
     });
@@ -37,23 +37,27 @@ Example:
     
     using static SlackBotNet.MatchFactory;
 
-    bot.When(
-        Matches.TextContaining("knock knock"),
-        async conv =>
-        {
-            var who = await conv.ReplyAsync("Who's there?");
-            var punchline = await conv.ReplyAsync($"{who.Text} who?");
-            await conv.ReplyAsync($"{punchline.Text}, lol :laughing:");
-        });
+    bot.When("knock knock", Modes.StartThread, async conv =>
+    {
+        await conv.PostMessage("Who's there?");
+
+        var who = await conv.WaitForReply();
+        await conv.PostMessage($"{who.Text} who?");
+
+        var punchline = await conv.WaitForReply();
+        await conv.PostMessage($"{punchline.Text}, lol :laughing:");
+    });
 
 
-Multiple MessageMatchers can be combined by using the `Or` matcher or the double pipes:
+Multiple MessageMatchers can be combined by using the `Or` or `And` matcher or the double pipes/double ampersand operators:
 
-    Matches.TextContaining("hello").Or(Matches.Regex("^world$"))
+    Matches.Text("hello").Or(Matches.Regex("^world$"))
+    Matches.Text("text").And(Matches.Message(m => m.RawThreadTimestamp == null))
 
 Equivalent:
 
-    Matches.TextContaining("hello") || Matches.Regex("^world$")
+    Matches.Text("hello") || Matches.Regex("^world$")
+    Matches.Text("text") && Matches.Message(m => m.RawThreadTimestamp == null)
 
 When multiple MessageMatchers are used, they short-circuit, meaning if the first one matches the message then the second MessageMatcher will not be tried.
 
@@ -62,7 +66,7 @@ When multiple MessageMatchers are used, they short-circuit, meaning if the first
 Bots can be configured to listen for messages on Channels they are joined to, groups they are a part of or when they receive direct messages. They will default to listening on all hub types.
 
     bot.When(
-        Matches.TextContaining("hello"), 
+        Matches.Text("hello"), 
         HubType.DirectMessage | HubType.Channel, 
         async conv =>
         {
@@ -71,15 +75,29 @@ Bots can be configured to listen for messages on Channels they are joined to, gr
 
 ## Observing all messages in a channel
 
-When the bot is observing a channel or group, by default it will only listen for messages that contain the name of the bot in the message text. If you want the bot to listen to all messages in a channel, the `HubType.ObserveAllMessages` flag can be set.
+When the bot is observing a channel or group, by default it will only listen for messages that contain the name of the bot in the message text. If you want the bot to listen to all messages in a channel, the `Modes.ObserveAllMessages` flag can be set.
 
     bot.When(
-        Matches.TextContaining("hello"),
-        HubType.Channel | HubType.ObserveAllMessages,
+        Matches.Text("hello"),
+        Modes.ObserveAllMessages,
         async conv =>
         {
-	    ...
+            ...
         });
+
+## Replying with a thread
+
+By default the bot will send its reply to the channel. It can also start a thread by using the `Modes.StartThread` flag.
+
+    bot.When(
+        Matches.Text("hello"),
+        Modes.StartThread,
+        async conv =>
+        {
+            ...
+        });
+
+If the `StartThread` mode is not set and a Slack user replies to a bot message with a thread, the bot will automatically swith to the thread mode.
 
 ## Error Handling
 
@@ -90,15 +108,15 @@ Example:
     using static SlackBotNet.MatchFactory;
 
     bot
-        .When(Matches.TextContaining("hello"),
+        .When(Matches.Text("hello"),
             async conv =>
-	    {
+        {
                 // exception thrown
-	    })
-	.OnException((msg, ex) =>
-	{
-            // log exception
-	});
+        })
+        .OnException((msg, ex) =>
+        {
+                // log exception
+        });
 
 
 ## Multiple Handlers
@@ -124,9 +142,19 @@ All `When` handlers that match the incoming message will be fired.
 
 # Available Message Matchers
 
-### TextContaining
+### Text
 
-Matches a message that contains the given text.
+Matches a message that contains the given text. 
+
+The `string` type is implicitly converted to the text matcher.
+
+Example:
+
+    bot.When("hello", async conv =>
+    {
+        ...
+    })
+
 
 ### Regex
 
@@ -138,7 +166,7 @@ Takes a predicate that can inspect the raw instance of the `SlackBotNet.Messages
 
 ### LuisIntent
 
-Hooks up to the [Language Understanding Intelligent Service (luis)](https://www.luis.ai) for processing natural language.
+Hooks up to the [Language Understanding Intelligent Service (luis)](https://www.luis.ai) for processing natural language. Up to `LuisConfig.CacheSize` results will be maintained in local cache (defaults to 100).
 
 Installation:
 
@@ -149,9 +177,49 @@ Configuration:
     LuisConfig.SubscriptionKey = "...";
     LuisConfig.AppKey = "...";
 
+    LuisConfig.CacheSize = 100;
+
 Using:
 
     Matches.LuisIntent(intentName: "Intent", confidenceThreshold: 0.9m)
+
+# Examples
+
+## Tell a Joke
+
+Tells a knock-knock joke. The conversation can be ended by the user typing _nevermind_ at any point.
+
+    bot.When(
+        Matches.Text("tell me a joke"),
+        Modes.StartThread,
+        async conv =>
+        {
+            await conv.PostMessage("okay! knock knock");
+
+            async Task Continue()
+            {
+                await conv.WaitForReply("who's there?");
+
+                await conv.PostMessage("broken pencil");
+
+                await conv.WaitForReply(
+                    "broken pencil who?", 
+                    async _ => await conv.PostMessage("nope, try again"));
+
+                await conv.PostMessage("nevermind, it's pointless");
+
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                await conv.PostMessage(":joy:");
+            }
+
+            async Task Quit()
+            {
+                await conv.WaitForReply("nevermind");
+                await conv.PostMessage("okay then :expressionless:");
+            }
+
+            await Task.WhenAny(Continue(), Quit());
+        });
 
 # License
 

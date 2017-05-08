@@ -1,8 +1,10 @@
 ﻿using SlackBotNet.State;
 using SlackBotNet.Tests.Infrastructure;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SlackBotNet.Messages.WebApi;
 using Xunit;
 
 namespace SlackBotNet.Tests
@@ -29,9 +31,9 @@ namespace SlackBotNet.Tests
 
             var bot = await SlackBot.InitializeAsync("", driver, this.bus);
 
-            await bot.SendAsync("test", "test");
-            await bot.SendAsync("test", "test");
-            await bot.SendAsync("test", "test");
+            await bot.SendAsync("test", "test", null);
+            await bot.SendAsync("test", "test", null);
+            await bot.SendAsync("test", "test", null);
 
             if (!evt.Wait(TimeSpan.FromSeconds(4)))
                 Assert.True(false, "3 messages were not recorded as being sent");
@@ -53,20 +55,15 @@ namespace SlackBotNet.Tests
         [InlineData('&', "&amp;")]
         [InlineData('<', "&lt;")]
         [InlineData('>', "&gt;")]
-        public async Task MessageIsEncoded(char unenc, string enc)
+        public void MessageIsEncoded(char unenc, string enc)
         {
-            var evt = new CountdownEvent(1);
-            var driver = new CountdownDriver(evt);
+            var message = new PostMessage("channel", $"test {unenc} test");
 
-            var bot = await SlackBot.InitializeAsync("", driver, this.bus);
+            var result = message
+                .ToKeyValuePairs()
+                .First(m => m.Key == "text");
 
-            await bot.SendAsync("test", $"test {unenc} test");
-
-            evt.Wait(TimeSpan.FromMilliseconds(1200));
-
-            Assert.True(
-                driver.RecordedMessages[0].Text.Contains($"test {enc} test")
-            );
+            Assert.Equal($"test {enc} test", result.Value);
         }
     }
 }

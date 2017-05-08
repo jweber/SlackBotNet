@@ -41,13 +41,13 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("test"), cv =>
+            bot.When(Matches.Text("test"), cv =>
             {
                 evt.Set();
                 return Task.CompletedTask;
             });
 
-            bot.When(Matches.TextContaining("test"), cv =>
+            bot.When(Matches.Text("test"), cv =>
             {
                 Assert.True(false, "Second handler should not be fired");
                 return Task.CompletedTask;
@@ -77,13 +77,13 @@ namespace SlackBotNet.Tests
 
             var evt = new CountdownEvent(2);
 
-            bot.When(Matches.TextContaining("test"), cv =>
+            bot.When(Matches.Text("test"), cv =>
             {
                 evt.Signal();
                 return Task.CompletedTask;
             });
 
-            bot.When(Matches.TextContaining("test"), cv =>
+            bot.When(Matches.Text("test"), cv =>
             {
                 evt.Signal();
                 return Task.CompletedTask;
@@ -159,7 +159,7 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("hello"), c =>
+            bot.When(Matches.Text("hello"), c =>
             {
                 evt.Set();
                 return Task.CompletedTask;
@@ -186,7 +186,7 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("hello"), c =>
+            bot.When(Matches.Text("hello"), c =>
             {
                 evt.Set();
                 return Task.CompletedTask;
@@ -215,7 +215,7 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("hello"), c =>
+            bot.When(Matches.Text("hello"), c =>
             {
                 evt.Set();
                 return Task.CompletedTask;
@@ -243,7 +243,7 @@ namespace SlackBotNet.Tests
             var evt = new AutoResetEvent(false);
 
             bot.When(
-                Matches.TextContaining("hello"),
+                Matches.Text("hello"),
                 HubType.Channel,
                 c =>
                 {
@@ -273,8 +273,8 @@ namespace SlackBotNet.Tests
             var evt = new AutoResetEvent(false);
 
             bot.When(
-                Matches.TextContaining("hello"),
-                HubType.Channel | HubType.ObserveAllMessages,
+                Matches.Text("hello"),
+                HubType.Channel, Modes.ObserveAllMessages,
                 c =>
                 {
                     evt.Set();
@@ -304,7 +304,7 @@ namespace SlackBotNet.Tests
 
             var evt = new AutoResetEvent(false);
 
-            bot.When(Matches.TextContaining("hello"), c =>
+            bot.When(Matches.Text("hello"), c =>
             {
                 evt.Set();
                 return Task.CompletedTask;
@@ -332,7 +332,7 @@ namespace SlackBotNet.Tests
             var evt = new AutoResetEvent(false);
 
             bot
-                .When(Matches.TextContaining("hello"), c => throw new Exception("exception message"))
+                .When(Matches.Text("hello"), c => throw new Exception("exception message"))
                 .OnException((msg, ex) =>
                 {
                     Assert.Equal("exception message", ex.Message);

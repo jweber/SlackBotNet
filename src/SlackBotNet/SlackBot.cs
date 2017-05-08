@@ -139,38 +139,136 @@ namespace SlackBotNet
                });
         }
 
+        /// <summary>
+        /// Posts a message to the <paramref name="hub"/>.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="message"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
         public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
             => this.SendAsync(hub.Id, message, attachments);
 
-        public Task SendAsync(string channel, string message, params Attachment[] attachments)
+        /// <summary>
+        /// Posts a message to the <paramref name="channelId"/>.
+        /// </summary>
+        /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="message"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(string channelId, string message, params Attachment[] attachments)
         {
-            this.messageQueue.Enqueue(new PostMessage(channel, message, attachments));
+            this.messageQueue.Enqueue(new PostMessage(channelId, message, attachments));
             return Task.CompletedTask;
         }
 
-        private string EncodeMessage(string message)
-            => message
-                .Replace("&", "&amp;")
-                .Replace("<", "&lt;")
-                .Replace(">", "&gt;");
+        /// <summary>
+        /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="message"></param>
+        /// <param name="replyTo"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(Hub hub, string message, Message replyTo, params Attachment[] attachments)
+            => this.ReplyAsync(hub.Id, message, replyTo, attachments);
+
+        /// <summary>
+        /// Posts a message to a thread in the <paramref name="channelId"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="message"></param>
+        /// <param name="replyTo"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(string channelId, string message, Message replyTo, params Attachment[] attachments)
+        {
+            var ts = !string.IsNullOrEmpty(replyTo.RawThreadTimestamp)
+                ? replyTo.RawThreadTimestamp
+                : replyTo.ChannelTimestamp;
+
+            this.QueueForSending(new PostMessage(channelId, message, attachments) { ThreadTimestamp = ts });
+            return Task.CompletedTask;
+        }
+
+        private void QueueForSending(PostMessage message) => this.messageQueue.Enqueue(message);
 
         #endregion
 
         #region Receive
 
+        /// <summary>
+        /// Sets up a handler to be run when a message of type <typeparamref name="TMessage"/>
+        /// is read from the Slack RTM websocket connection.
+        /// </summary>
+        /// <remarks>
+        /// See <a href="https://api.slack.com/rtm">https://api.slack.com/rtm</a> for a list of events that can be observed.
+        /// <para>
+        /// The <c>SlackBotNet.Messages</c> namespace contains type definitions for some of these events.
+        /// </para>
+        /// </remarks>
+        /// <typeparam name="TMessage"></typeparam>
+        /// <param name="handler"></param>
+        /// <returns></returns>
         public IDisposable On<TMessage>(Action<TMessage> handler)
-            where TMessage : IRtmMessage
-        {
-            return this.messageBus.Observe<TMessage>().Subscribe(handler);
-        }
+            where TMessage : IRtmMessage 
+            => this.messageBus.Observe<TMessage>().Subscribe(handler);
 
-        public IWhenHandler When(MessageMatcher match, Func<Conversation, Task> handler)
-            => this.When(match, HubType.Channel | HubType.DirectMessage | HubType.Group, handler);
+        /// <summary>
+        /// Sets up a listener on all Slack channels that the bot is a member of. The <paramref name="handler"/> 
+        /// is executed when an incoming message matches the given <paramref name="match"/>. 
+        /// Messages in <see cref="HubType.Channel"/> and <see cref="HubType.Group"/> are expected to 
+        /// contain the name of the bot before the handler  will fire.
+        /// </summary>
+        /// <param name="match">Defines when to execute this handler</param>
+        /// <param name="handler">Function to be run when a message matches</param>
+        /// <returns></returns>
+        public IWhenHandler When(MessageMatcher match, Func<IConversation, Task> handler)
+            => this.When(match, HubType.All, Modes.None, handler);
 
-        public IWhenHandler When(MessageMatcher match, HubType hubs, Func<Conversation, Task> handler)
+        /// <summary>
+        /// Sets up a listener on the defined channelId types (see <paramref name="hubs"/>) that the bot is a member of. The <paramref name="handler"/> 
+        /// is executed when an incoming message matches the given <paramref name="match"/>. 
+        /// Messages in <see cref="HubType.Channel"/> and <see cref="HubType.Group"/> are expected to 
+        /// contain the name of the bot before the handler  will fire.
+        /// </summary>
+        /// <param name="match">Defines when to execute this handler</param>
+        /// <param name="hubs">The Slack channels to listen on</param>
+        /// <param name="handler">Function to be run when a message matches</param>
+        /// <returns></returns>
+        public IWhenHandler When(MessageMatcher match, HubType hubs, Func<IConversation, Task> handler)
+            => this.When(match, hubs, Modes.None, handler);
+
+        /// <summary>
+        /// Sets up a listener on all Slack channels that the bot is a member of. The <paramref name="handler"/> 
+        /// is executed when an incoming message matches the given <paramref name="match"/>. 
+        /// Messages in <see cref="HubType.Channel"/> and <see cref="HubType.Group"/> are expected to 
+        /// contain the name of the bot before the handler  will fire.
+        /// </summary>
+        /// <param name="match">Defines when to execute this handler</param>
+        /// <param name="modes">Configuration options</param>
+        /// <param name="handler">Function to be run when a message matches</param>
+        /// <returns></returns>
+        public IWhenHandler When(MessageMatcher match, Modes modes, Func<IConversation, Task> handler)
+            => this.When(match, HubType.All, modes, handler);
+
+        /// <summary>
+        /// Sets up a listener on the defined channelId types (see <paramref name="hubs"/>) that the bot is a member of. The <paramref name="handler"/> 
+        /// is executed when an incoming message matches the given <paramref name="match"/>. 
+        /// Messages in <see cref="HubType.Channel"/> and <see cref="HubType.Group"/> are expected to 
+        /// contain the name of the bot before the handler  will fire.
+        /// </summary>
+        /// <param name="match">Defines when to execute this handler</param>
+        /// <param name="hubs">The Slack channels to listen on</param>
+        /// <param name="modes">Configuration options</param>
+        /// <param name="handler">Function to be run when a message matches</param>
+        /// <returns></returns>
+        public IWhenHandler When(MessageMatcher match, HubType hubs, Modes modes, Func<IConversation, Task> handler)
         {
             bool MessageAddressesBot(Message msg) => 
-                (hubs & HubType.ObserveAllMessages) == HubType.ObserveAllMessages 
+                (modes & Modes.ObserveAllMessages) == Modes.ObserveAllMessages 
                 || msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase) 
                 || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
 
@@ -194,23 +292,23 @@ namespace SlackBotNet
                 },
                 async (msg, matches) =>
                 {
-                    var conversation = new Conversation(
-                        this,
-                        this.state.GetUser(msg.User),
-                        this.state.GetHubById(msg.Channel),
-                        msg.Text,
-                        matches,
-                        MessageAddressesBot
-                    );
+                    var modesCopy = modes;
 
-                    try
+                    // Conversation being initiated from another thread? force threaded mode
+                    if (msg.RawThreadTimestamp != null)
+                        modesCopy |= Modes.StartThread;
+
+                    using (var conversation = new Conversation(this, modesCopy, msg, matches))
                     {
-                        await handler(conversation);
-                        return (true, null);
-                    }
-                    catch (Exception ex)
-                    {
-                        return (false, ex);
+                        try
+                        {
+                            await handler(conversation);
+                            return (true, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            return (false, ex);
+                        }
                     }
                 });
 
