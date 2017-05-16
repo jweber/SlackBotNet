@@ -1,13 +1,13 @@
 ﻿using Newtonsoft.Json.Linq;
 using SlackBotNet.State;
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Drivers
@@ -19,17 +19,12 @@ namespace SlackBotNet.Drivers
         private ClientWebSocket websocket;
 
         private readonly string slackToken;
-        private readonly JsonSerializerSettings serializerSettings;
-        
+        private readonly CancellationTokenSource tokenSource;
+
         public SlackRtmDriver(string slackToken)
         {
             this.slackToken = slackToken;
-
-            this.serializerSettings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            };
+            this.tokenSource = new CancellationTokenSource();
         }
 
         public async Task<SlackBotState> ConnectAsync(IMessageBus bus)
@@ -43,9 +38,8 @@ namespace SlackBotNet.Drivers
 
             this.websocket = new ClientWebSocket();
             this.websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
-            
 
-            await this.websocket.ConnectAsync(new Uri(websocketUrl), CancellationToken.None);
+            await this.websocket.ConnectAsync(new Uri(websocketUrl), this.tokenSource.Token);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(async () => await this.Listen(bus));
@@ -56,7 +50,8 @@ namespace SlackBotNet.Drivers
 
         public async Task DisconnectAsync()
         {
-            await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Normal closure", CancellationToken.None);
+            this.tokenSource.Cancel();
+            await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Normal closure", this.tokenSource.Token);
             this.websocket.Dispose();
         }
 
@@ -69,7 +64,7 @@ namespace SlackBotNet.Drivers
                 new ArraySegment<byte>(Encoding.UTF8.GetBytes(message.Text)),
                 WebSocketMessageType.Text,
                 true,
-                CancellationToken.None);
+                this.tokenSource.Token);
         }
 
         private async Task<PostMessageResponse> SendMessageOverWebApi(PostMessage message)
@@ -94,25 +89,44 @@ namespace SlackBotNet.Drivers
         {
             while (this.websocket.State == WebSocketState.Open)
             {
-                var buffer = new ArraySegment<byte>(new byte[4096]);
-                var result = await this.websocket.ReceiveAsync(buffer, CancellationToken.None);
+                var buffer = new ArraySegment<byte>(new byte[8192]);
 
-                if (result.MessageType == WebSocketMessageType.Close)
+                using (var ms = new MemoryStream())
                 {
-                    await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-                }
-                else
-                {
-                    var rawMessage = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count).TrimEnd('\0');
+                    WebSocketReceiveResult result;
 
-                    object msg = Serialization.Deserialize(rawMessage);
-                    bus.Publish(msg);
+                    do
+                    {
+                        result = await this.websocket.ReceiveAsync(buffer, this.tokenSource.Token);
+                        ms.Write(buffer.Array, buffer.Offset, result.Count);
+                    } while (!result.EndOfMessage);
+
+                    ms.Seek(0, SeekOrigin.Begin);
+
+                    switch (result.MessageType)
+                    {
+                        case WebSocketMessageType.Close:
+                            await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty,
+                                this.tokenSource.Token);
+                            break;
+                        case WebSocketMessageType.Text:
+                            using (var reader = new StreamReader(ms, Encoding.UTF8))
+                            {
+                                var rawMessage = reader.ReadToEnd();
+                                var message = Serialization.Deserialize(rawMessage);
+
+                                if (message != null)
+                                    bus.Publish(message);
+                            }
+                            break;
+                    }
                 }
             }
         }
 
         public void Dispose()
         {
+            this.tokenSource.Cancel();
             this.websocket?.Dispose();
         }
     }
