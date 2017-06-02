@@ -15,16 +15,18 @@ namespace SlackBotNet.Matcher
 
         private readonly string intentName;
         private readonly decimal confidenceThreshold;
+        private readonly bool spellCheck;
 
         private static readonly HttpClient HttpClient = new HttpClient();
 
         private const string Url =
-            "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/{0}?subscription-key={1}&timezoneOffset=0&verbose=false&q={2}";
+            "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/{0}?subscription-key={1}&timezoneOffset=0&verbose=false&spellCheck={2}&q={3}";
 
-        public LuisIntentMatcher(string intentName, decimal confidenceThreshold = 0.9m)
+        public LuisIntentMatcher(string intentName, decimal confidenceThreshold = 0.9m, bool spellCheck = true)
         {
             this.intentName = intentName;
             this.confidenceThreshold = confidenceThreshold;
+            this.spellCheck = spellCheck;
         }
 
         private LuisResponse GetLuisResponse(string message)
@@ -34,6 +36,7 @@ namespace SlackBotNet.Matcher
                 var requestUrl = string.Format(Url,
                     LuisConfig.AppKey,
                     LuisConfig.SubscriptionKey,
+                    this.spellCheck.ToString().ToLowerInvariant(),
                     message);
 
                 var response = await HttpClient.GetAsync(new Uri(requestUrl));
