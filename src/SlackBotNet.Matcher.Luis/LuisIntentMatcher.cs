@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SlackBotNet.Messages;
 
@@ -40,6 +41,9 @@ namespace SlackBotNet.Matcher
                     message);
 
                 var response = await HttpClient.GetAsync(new Uri(requestUrl));
+                
+                this.Logger.LogInformation($"Request to {requestUrl} resulted in status code of {response.StatusCode}");
+                
                 if (!response.IsSuccessStatusCode)
                     throw new HttpRequestException($"LUIS call failed. Response code was {response.StatusCode}: {response.ReasonPhrase}");
 
@@ -55,7 +59,9 @@ namespace SlackBotNet.Matcher
 
             // trim cache
             if (LuisResponseCache.Count >= LuisConfig.CacheSize)
-            {
+            {   
+                this.Logger.LogInformation($"LUIS reponse cache exceeded {LuisConfig.CacheSize}. Trimming the cache");
+                
                 var expiredKeys = LuisResponseCache
                     .Where(m => !m.Key.message.Equals(message, StringComparison.OrdinalIgnoreCase))
                     .OrderBy(m => m.Value.Result.added)
@@ -70,16 +76,19 @@ namespace SlackBotNet.Matcher
         }
 
         public override Task<Match[]> GetMatches(Message message)
-        {
+        {          
             if (!LuisConfig.Configured || string.IsNullOrWhiteSpace(message.Text))
                 return NoMatch;
 
             var response = this.GetLuisResponse(message.Text);
             
+            this.Logger.LogDebug($"Top scoring intent was '{response.TopScoringIntent.Intent}' (score: {response.TopScoringIntent.Score}) for message '{message.Text}'");
+            
             var passesThreshold = response.TopScoringIntent.Score >= this.confidenceThreshold;
-            var matchesIntent = response.TopScoringIntent.Intent.Equals(this.intentName,
-                StringComparison.OrdinalIgnoreCase);
+            var matchesIntent = response.TopScoringIntent.Intent.Equals(this.intentName, StringComparison.OrdinalIgnoreCase);
 
+            this.Logger.LogDebug($"Message: {message.Text}; Passes threshold of {this.confidenceThreshold}? {passesThreshold}; Matches intent of {this.intentName}? {matchesIntent}");
+            
             if (passesThreshold && matchesIntent)
             {
                 return Task.FromResult(

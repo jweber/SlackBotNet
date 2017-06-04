@@ -1,11 +1,13 @@
 ﻿using System;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SlackBotNet
 {
     public interface ISlackBotConfig
     {
         WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
-        Action<string> TraceHandler { get; set; }
+        ILoggerFactory LoggerFactory { get; set; }
     }
 
     public enum WhenHandlerMatchMode
@@ -20,10 +22,12 @@ namespace SlackBotNet
         public DefaultSlackBotConfig()
         {
             this.WhenHandlerMatchMode = WhenHandlerMatchMode.FirstMatch;
-            this.TraceHandler = _ => { };
+
+            this.LoggerFactory = new LoggerFactory();
+            this.LoggerFactory.AddProvider(NullLoggerProvider.Instance);           
         }
 
         public WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
-        public Action<string> TraceHandler { get; set; }
+        public ILoggerFactory LoggerFactory { get; set; }
     }
 }

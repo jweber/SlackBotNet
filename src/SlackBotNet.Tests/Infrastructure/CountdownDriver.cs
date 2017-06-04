@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Tests.Infrastructure
@@ -27,7 +28,7 @@ namespace SlackBotNet.Tests.Infrastructure
         public IReadOnlyList<PostMessage> RecordedMessages
             => this.timings.Select(m => m.message).ToList();
 
-        public Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        public Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger)
             => Task.FromResult(SlackBotState.Initialize("1", "testbot"));
 
         public Task DisconnectAsync() => Task.CompletedTask;

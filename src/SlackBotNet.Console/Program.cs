@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using SlackBotNet;
-using SlackBotNet.State;
-using static SlackBotNet.MatchFactory;
 
 class Program
 {
@@ -16,6 +16,12 @@ class Program
 
     static async Task MainAsync()
     {
-        var bot = await SlackBot.InitializeAsync("token");
+        var loggerFactory = new LoggerFactory();
+        loggerFactory.AddProvider(new ConsoleLoggerProvider((s, level) => true, true));
+
+        var bot = await SlackBot.InitializeAsync("token", cfg =>
+        {
+            cfg.LoggerFactory = loggerFactory;
+        });
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using SlackBotNet.State;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Tests.Infrastructure
@@ -16,7 +17,7 @@ namespace SlackBotNet.Tests.Infrastructure
             this.state = state;
         }
 
-        public Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        public Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger)
         {
             return Task.FromResult(this.state);
         }

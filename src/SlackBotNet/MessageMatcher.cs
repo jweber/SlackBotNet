@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using SlackBotNet.Matcher;
 using SlackBotNet.Messages;
 
@@ -8,6 +9,13 @@ namespace SlackBotNet
 {
     public abstract class MessageMatcher
     {
+        public void SetupLogger(ILoggerFactory factory)
+        {
+            this.Logger = factory.CreateLogger(this.GetType());
+        }
+        
+        protected ILogger Logger { get; private set; }
+        
         [NotNull]
         public abstract Task<Match[]> GetMatches(Message message);
 

@@ -4,7 +4,16 @@
     <TargetFramework>netcoreapp1.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SlackBotNet.Matcher.Luis\SlackBotNet.Matcher.Luis.csproj" />
-    <ProjectReference Include="..\SlackBotNet\SlackBotNet.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="1.1.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SlackBotNet.Matcher.Luis\SlackBotNet.Matcher.Luis.csproj">
+      <Project>{5762a4ea-f854-449d-80c1-6f02b14cb72e}</Project>
+      <Name>SlackBotNet.Matcher.Luis</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SlackBotNet\SlackBotNet.csproj">
+      <Project>{15e92469-2639-4070-ba4e-85101d2ad1cc}</Project>
+      <Name>SlackBotNet</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

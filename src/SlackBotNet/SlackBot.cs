@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using SlackBotNet.Messages;
@@ -18,23 +19,25 @@ namespace SlackBotNet
         private readonly IMessageBus messageBus;
         private readonly SlackBotState state;
         private readonly ISlackBotConfig config;
+        private readonly ILogger<SlackBot> logger;
 
         private ConcurrentQueue<WhenHandler> whenHandlers;
 
         private IDriver driver;
-
         private IDisposable sendTimer = null;
 
         private SlackBot(
             SlackBotState state,
             IDriver driver,
             IMessageBus bus,
-            ISlackBotConfig config)
+            ISlackBotConfig config,
+            ILogger<SlackBot> logger)
         {
             this.state = state;
             this.config = config;
+            this.logger = logger;
+            
             this.driver = driver;
-
             this.messageBus = bus;
 
             this.whenHandlers = new ConcurrentQueue<WhenHandler>();
@@ -50,20 +53,22 @@ namespace SlackBotNet
             var defaultConfig = new DefaultSlackBotConfig();
             config?.Invoke(defaultConfig);
 
-            var state = await driver.ConnectAsync(bus);
+            var logger = defaultConfig.LoggerFactory.CreateLogger<SlackBot>();
+            
+            var state = await driver.ConnectAsync(bus, logger);
 
-            var bot = new SlackBot(state, driver, bus, defaultConfig);
+            var bot = new SlackBot(state, driver, bus, defaultConfig, logger);
             bot.StartSendListener();
 
             bot.On<IHubJoined>(msg =>
             {
                 bot.state.AddHub(msg.Channel.Id, msg.Channel.Name, msg.HubType);
-                bot.config.TraceHandler($"Joined hub {msg.Channel.Name} (Id: {msg.Channel.Id})");
+                logger.LogInformation($"Joined hub {msg.Channel.Name} (Id: {msg.Channel.Id})");
             });
 
             bot.On<IHubLeft>(msg =>
             {
-                bot.config.TraceHandler($"Left hub {bot.state.GetHubById(msg.Channel).Name}");
+                logger.LogInformation($"Left hub {bot.state.GetHubById(msg.Channel).Name}");
                 bot.state.RemoveHub(msg.Channel);
             });
 
@@ -335,7 +340,9 @@ namespace SlackBotNet
                         if (!MessageAddressesBot(msg))
                             return MessageMatcher.NoMatch;
                     }
-
+                    
+                    match.SetupLogger(this.config.LoggerFactory);
+                    
                     return match.GetMatches(msg);
                 },
                 async (msg, matches) =>

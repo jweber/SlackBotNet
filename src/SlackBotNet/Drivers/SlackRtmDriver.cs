@@ -8,6 +8,7 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using SlackBotNet.Messages;
@@ -30,7 +31,7 @@ namespace SlackBotNet.Drivers
             this.tokenSource = new CancellationTokenSource();
         }
 
-        public Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        public Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger)
         {
             Observable
                 .Timer(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5))
@@ -55,32 +56,36 @@ namespace SlackBotNet.Drivers
                     }
                     catch (Exception ex)
                     {
-                        await this.ConnectRtmAsync(bus);
+                        logger.LogError($"Failed to ping the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
+                        
+                        await this.ConnectRtmAsync(bus, logger);
                         return;
                     }
 
-                    //Console.WriteLine("ping?");
+                    logger.LogDebug($"ping? (id: {ping.Id})");
                     
                     try
                     {
-                        await obs
+                        var pong = await obs
                             .FirstAsync()
                             .Timeout(DateTimeOffset.UtcNow.AddSeconds(10));
-                        
-                        //Console.WriteLine("pong!");
 
+                        logger.LogDebug($"pong! (id: {pong.ReplyTo})");
                     }
                     catch (Exception ex)
                     {
-                        await this.ConnectRtmAsync(bus);
+                        logger.LogError($"Failed to receive the Pong message from the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
+
+                        await this.ConnectRtmAsync(bus, logger);
                     }
                 });
 
-            return this.ConnectRtmAsync(bus);
+            return this.ConnectRtmAsync(bus, logger);
         }
 
-        private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus)
+        private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus, ILogger logger)
         {
+            logger.LogDebug("Retrieving websocket URL");
             var json = await HttpClient.GetStringAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
             var jData = JObject.Parse(json);
 
@@ -91,10 +96,12 @@ namespace SlackBotNet.Drivers
             this.websocket = new ClientWebSocket();
             this.websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
 
+            logger.LogDebug($"Opening connection to {websocketUrl}");
+
             await this.websocket.ConnectAsync(new Uri(websocketUrl), this.tokenSource.Token);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Task.Factory.StartNew(async () => await this.Listen(bus), TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(async () => await this.Listen(bus, logger), TaskCreationOptions.LongRunning);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             return state;
@@ -137,7 +144,7 @@ namespace SlackBotNet.Drivers
             return JsonConvert.DeserializeObject<PostMessageResponse>(content);
         }
 
-        private async Task Listen(IMessageBus bus)
+        private async Task Listen(IMessageBus bus, ILogger logger)
         {
             while (this.websocket.State == WebSocketState.Open)
             {
@@ -158,8 +165,8 @@ namespace SlackBotNet.Drivers
                     switch (result.MessageType)
                     {
                         case WebSocketMessageType.Close:
-                            await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty,
-                                this.tokenSource.Token);
+                            logger.LogInformation("Received socket close message. Closing the socket connection");
+                            await this.websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, this.tokenSource.Token);
                             break;
                         case WebSocketMessageType.Text:
                             using (var reader = new StreamReader(ms, Encoding.UTF8))
@@ -168,7 +175,12 @@ namespace SlackBotNet.Drivers
                                 var message = Serialization.Deserialize(rawMessage);
 
                                 if (message != null)
+                                {
+                                    if (message.GetType() != typeof(Pong))
+                                        logger.LogInformation($"Received message type: {message.GetType()}");
+                                    
                                     bus.Publish(message);
+                                }
                             }
                             break;
                     }
