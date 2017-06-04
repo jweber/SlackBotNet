@@ -4,10 +4,13 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Drivers
@@ -27,7 +30,56 @@ namespace SlackBotNet.Drivers
             this.tokenSource = new CancellationTokenSource();
         }
 
-        public async Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        public Task<SlackBotState> ConnectAsync(IMessageBus bus)
+        {
+            Observable
+                .Timer(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5))
+                .Subscribe(async _ =>
+                {
+                    if (this.websocket == null || this.websocket.State != WebSocketState.Open)
+                        return;
+                    
+                    var ping = new Ping(DateTimeOffset.UtcNow.Ticks);
+
+                    var obs = bus
+                        .Observe<Pong>()
+                        .Where(m => m.ReplyTo == ping.Id);
+
+                    try
+                    {
+                        await this.websocket.SendAsync(
+                            new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ping, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }))),
+                            WebSocketMessageType.Text,
+                            true,
+                            this.tokenSource.Token);
+                    }
+                    catch (Exception ex)
+                    {
+                        await this.ConnectRtmAsync(bus);
+                        return;
+                    }
+
+                    //Console.WriteLine("ping?");
+                    
+                    try
+                    {
+                        await obs
+                            .FirstAsync()
+                            .Timeout(DateTimeOffset.UtcNow.AddSeconds(10));
+                        
+                        //Console.WriteLine("pong!");
+
+                    }
+                    catch (Exception ex)
+                    {
+                        await this.ConnectRtmAsync(bus);
+                    }
+                });
+
+            return this.ConnectRtmAsync(bus);
+        }
+
+        private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus)
         {
             var json = await HttpClient.GetStringAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
             var jData = JObject.Parse(json);
@@ -42,7 +94,7 @@ namespace SlackBotNet.Drivers
             await this.websocket.ConnectAsync(new Uri(websocketUrl), this.tokenSource.Token);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Task.Run(async () => await this.Listen(bus));
+            Task.Factory.StartNew(async () => await this.Listen(bus), TaskCreationOptions.LongRunning);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             return state;
