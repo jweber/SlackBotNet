@@ -10,8 +10,8 @@ namespace SlackBotNet.Matcher
 {
     internal class LuisIntentMatcher : MessageMatcher
     {
-        private static readonly ConcurrentDictionary<string, Task<(DateTimeOffset added, LuisResponse response)>> LuisResponseCache
-            = new ConcurrentDictionary<string, Task<(DateTimeOffset added, LuisResponse response)>>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<(string message, bool spellCheck), Task<(DateTimeOffset added, LuisResponse response)>> LuisResponseCache
+            = new ConcurrentDictionary<(string message, bool spellCheck), Task<(DateTimeOffset added, LuisResponse response)>>();
 
         private readonly string intentName;
         private readonly decimal confidenceThreshold;
@@ -57,7 +57,7 @@ namespace SlackBotNet.Matcher
             if (LuisResponseCache.Count >= LuisConfig.CacheSize)
             {
                 var expiredKeys = LuisResponseCache
-                    .Where(m => !m.Key.Equals(message, StringComparison.OrdinalIgnoreCase))
+                    .Where(m => !m.Key.message.Equals(message, StringComparison.OrdinalIgnoreCase))
                     .OrderBy(m => m.Value.Result.added)
                     .Take(LuisResponseCache.Count - LuisConfig.CacheSize + 1)
                     .Select(m => m.Key);
@@ -66,7 +66,7 @@ namespace SlackBotNet.Matcher
                     LuisResponseCache.TryRemove(key, out var _);
             }
 
-            return LuisResponseCache.GetOrAdd(message, _ => MakeLuisRequest()).Result.response;
+            return LuisResponseCache.GetOrAdd((message, this.spellCheck), _ => MakeLuisRequest()).Result.response;
         }
 
         public override Task<Match[]> GetMatches(Message message)
