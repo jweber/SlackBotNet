@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
@@ -23,8 +24,10 @@ namespace SlackBotNet.Drivers
         private ClientWebSocket websocket;
 
         private readonly string slackToken;
-        private readonly CancellationTokenSource tokenSource;
+        private CancellationTokenSource tokenSource;
 
+        private static readonly SemaphoreSlim PingSemaphore = new SemaphoreSlim(1, 1);
+        
         public SlackRtmDriver(string slackToken)
         {
             this.slackToken = slackToken;
@@ -37,52 +40,76 @@ namespace SlackBotNet.Drivers
                 .Timer(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5))
                 .Subscribe(async _ =>
                 {
-                    if (this.websocket == null || this.websocket.State != WebSocketState.Open)
+                    if (!await PingSemaphore.WaitAsync(100, this.tokenSource.Token))
                         return;
-                    
-                    var ping = new Ping(DateTimeOffset.UtcNow.Ticks);
-
-                    var obs = bus
-                        .Observe<Pong>()
-                        .Where(m => m.ReplyTo == ping.Id);
 
                     try
                     {
-                        await this.websocket.SendAsync(
-                            new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ping, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }))),
-                            WebSocketMessageType.Text,
-                            true,
-                            this.tokenSource.Token);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError($"Failed to ping the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
+                        if (this.websocket == null)
+                            return;
+
+                        if (this.websocket.State != WebSocketState.Open)
+                        {
+                            logger.LogWarning($"Not pinging because the socket is not open. Current state is: {this.websocket.State}");
+                            return;
+                        }
+                    
+                        var ping = new Ping(DateTimeOffset.UtcNow.Ticks);
+
+                        var obs = bus
+                            .Observe<Pong>()
+                            .Where(m => m.ReplyTo == ping.Id);
+
+                        try
+                        {
+                            await this.websocket.SendAsync(
+                                new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(ping, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }))),
+                                WebSocketMessageType.Text,
+                                true,
+                                this.tokenSource.Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError($"Failed to ping the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
                         
-                        await this.ConnectRtmAsync(bus, logger);
-                        return;
-                    }
+                            await this.ReconnectRtmAsync(bus, logger);
+                            return;
+                        }
 
-                    logger.LogDebug($"ping? (id: {ping.Id})");
+                        logger.LogDebug($"ping? (id: {ping.Id})");
                     
-                    try
-                    {
-                        var pong = await obs
-                            .FirstAsync()
-                            .Timeout(DateTimeOffset.UtcNow.AddSeconds(10));
+                        try
+                        {
+                            var pong = await obs
+                                .FirstAsync()
+                                .Timeout(DateTimeOffset.UtcNow.AddSeconds(10));
 
-                        logger.LogDebug($"pong! (id: {pong.ReplyTo})");
+                            logger.LogDebug($"pong! (id: {pong.ReplyTo})");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError($"Failed to receive the Pong message from the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
+
+                            await this.ReconnectRtmAsync(bus, logger);
+                        }
                     }
-                    catch (Exception ex)
+                    finally
                     {
-                        logger.LogError($"Failed to receive the Pong message from the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
-
-                        await this.ConnectRtmAsync(bus, logger);
+                        PingSemaphore.Release();
                     }
                 });
 
             return this.ConnectRtmAsync(bus, logger);
         }
 
+        private Task<SlackBotState> ReconnectRtmAsync(IMessageBus bus, ILogger logger)
+        {
+            this.tokenSource.Cancel();
+            this.tokenSource = new CancellationTokenSource();
+            
+            return this.ConnectRtmAsync(bus, logger);
+        }
+        
         private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus, ILogger logger)
         {
             logger.LogDebug("Retrieving websocket URL");
@@ -101,7 +128,7 @@ namespace SlackBotNet.Drivers
             await this.websocket.ConnectAsync(new Uri(websocketUrl), this.tokenSource.Token);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Task.Factory.StartNew(async () => await this.Listen(bus, logger), TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(async () => await this.Listen(bus, logger), this.tokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
             return state;
@@ -148,6 +175,9 @@ namespace SlackBotNet.Drivers
         {
             while (this.websocket.State == WebSocketState.Open)
             {
+                if (this.tokenSource.Token.IsCancellationRequested)
+                    return;
+                
                 var buffer = new ArraySegment<byte>(new byte[8192]);
 
                 using (var ms = new MemoryStream())
@@ -156,6 +186,9 @@ namespace SlackBotNet.Drivers
 
                     do
                     {
+                        if (this.tokenSource.Token.IsCancellationRequested)
+                            return;
+                        
                         result = await this.websocket.ReceiveAsync(buffer, this.tokenSource.Token);
                         ms.Write(buffer.Array, buffer.Offset, result.Count);
                     } while (!result.EndOfMessage);
