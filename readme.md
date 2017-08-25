@@ -63,6 +63,8 @@ When multiple MessageMatchers are used, they short-circuit, meaning if the first
 
 ## Hubs
 
+_Note_: Private channels are considered to be Groups. If your bot needs to listen on a private channel, make sure that the HubType.Group is included.
+
 Bots can be configured to listen for messages on Channels they are joined to, groups they are a part of or when they receive direct messages. They will default to listening on all hub types.
 
     bot.When(
