@@ -11,6 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SlackBotNet.Matcher.Luis", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SlackBotNet.Console", "SlackBotNet.Console\SlackBotNet.Console.csproj", "{A8A3FBDC-02C8-41CB-8E14-EC8F98D76058}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{91A9DF53-D69D-49D4-9017-42EE8269A3BD}"
+ProjectSection(SolutionItems) = preProject
+	..\readme.md = ..\readme.md
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
