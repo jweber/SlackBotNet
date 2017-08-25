@@ -26,7 +26,7 @@ namespace SlackBotNet.Tests
             this.driver = new TestDriver(this.state);
             this.bus = new RxMessageBus();
 
-            this.bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            this.bot = await SlackBot.InitializeAsync(this.driver, this.bus);
         }
 
         public Task DisposeAsync() => Task.CompletedTask;

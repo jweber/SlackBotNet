@@ -31,7 +31,7 @@ namespace SlackBotNet.Tests
         [MemberData(nameof(HubJoinedData))]
         public async Task HubAddedToState_WhenBotJoinsHub(Func<IHubJoined> generator)
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             var msg = generator();
 
@@ -58,7 +58,7 @@ namespace SlackBotNet.Tests
         [MemberData(nameof(HubLeftData))]
         public async Task HubRemovedFromState_WhenBotLeavesHub(Func<IHubLeft> generator)
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             var msg = generator();
             msg.Channel = Guid.NewGuid().ToString();

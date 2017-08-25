@@ -46,9 +46,9 @@ namespace SlackBotNet
         public IReadOnlyState State => this.state;
 
         public static Task<SlackBot> InitializeAsync(string slackToken, Action<ISlackBotConfig> config = null)
-            => InitializeAsync(slackToken, new SlackRtmDriver(slackToken), new RxMessageBus(), config);
+            => InitializeAsync(new SlackRtmDriver(slackToken), new RxMessageBus(), config);
 
-        internal static async Task<SlackBot> InitializeAsync(string slackToken, IDriver driver, IMessageBus bus, Action<ISlackBotConfig> config = null)
+        internal static async Task<SlackBot> InitializeAsync(IDriver driver, IMessageBus bus, Action<ISlackBotConfig> config = null)
         {
             var defaultConfig = new DefaultSlackBotConfig();
             config?.Invoke(defaultConfig);

@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 using Xunit;
 
@@ -29,7 +30,7 @@ namespace SlackBotNet.Tests
             var evt = new CountdownEvent(3);
             var driver = new CountdownDriver(evt);
 
-            var bot = await SlackBot.InitializeAsync("", driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(driver, this.bus);
 
             await bot.SendAsync("test", "test", null);
             await bot.SendAsync("test", "test", null);

@@ -31,7 +31,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task MatchMode_FirstMatch()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus, cfg =>
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus, cfg =>
             {
                 cfg.WhenHandlerMatchMode = WhenHandlerMatchMode.FirstMatch;
             });
@@ -67,7 +67,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task MatchMode_AllMatches()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus, cfg =>
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus, cfg =>
             {
                 cfg.WhenHandlerMatchMode = WhenHandlerMatchMode.AllMatches;
             });
@@ -116,7 +116,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task MatchMode_BestMatch()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus, cfg =>
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus, cfg =>
             {
                 cfg.WhenHandlerMatchMode = WhenHandlerMatchMode.BestMatch;
             });
@@ -152,7 +152,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task DirectMessage_DoesNotRequireAddressingBotByName()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.DirectMessage);
@@ -179,7 +179,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task GroupMessage_BotDoesNotRespondWhenNotAddressedByName()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.Group);
@@ -208,7 +208,7 @@ namespace SlackBotNet.Tests
         [InlineData("hello {0}")]
         public async Task GroupMessage_RespondsWhenAddressingBotByName(string message)
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.Group);
@@ -235,7 +235,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task ChannelMessage_BotDoesNotRespondWhenNotAddressedByName()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.Channel);
@@ -265,7 +265,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task ChannelMessage_BotRespondWhenNotAddressedByName_WhenConfiguredToListenToAllMessages()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.Channel);
@@ -297,7 +297,7 @@ namespace SlackBotNet.Tests
         [InlineData("hello {0}")]
         public async Task ChannelMessage_RespondsWhenAddressingBotByName(string message)
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "test hub", HubType.Channel);
@@ -324,7 +324,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task ExceptionInHandler_TriggersOnExceptionCallback()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "", HubType.DirectMessage);
@@ -365,7 +365,7 @@ namespace SlackBotNet.Tests
         [Fact]
         public async Task ExceptionInMatcher_TriggersOnExceptionCallback()
         {
-            var bot = await SlackBot.InitializeAsync("", this.driver, this.bus);
+            var bot = await SlackBot.InitializeAsync(this.driver, this.bus);
 
             this.state.AddUser("1", "user");
             this.state.AddHub("1", "", HubType.DirectMessage);
