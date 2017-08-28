@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using SlackBotNet.Messages;
+using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet
 {
@@ -8,6 +11,7 @@ namespace SlackBotNet
     {
         WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
         ILoggerFactory LoggerFactory { get; set; }
+        Action<ISendMessageQueue, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
     }
 
     public enum WhenHandlerMatchMode
@@ -24,10 +28,13 @@ namespace SlackBotNet
             this.WhenHandlerMatchMode = WhenHandlerMatchMode.FirstMatch;
 
             this.LoggerFactory = new LoggerFactory();
-            this.LoggerFactory.AddProvider(NullLoggerProvider.Instance);           
+            this.LoggerFactory.AddProvider(NullLoggerProvider.Instance);
+
+            this.OnSendMessageFailure = (queue, msg, logger, ex) => { };
         }
 
         public WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
         public ILoggerFactory LoggerFactory { get; set; }
+        public Action<ISendMessageQueue, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
     }
 }

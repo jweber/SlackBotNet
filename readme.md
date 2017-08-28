@@ -28,6 +28,42 @@ Or publish simple messages to a Slack channel/group/DM:
     var hub = bot.State.GetHub("@username");
     await bot.SendAsync(hub, "Hello!");
 
+## Bot Configuration
+
+Optional configuration of the bot is set through the second argument to `SlackBot.InitializeAsync`
+
+    var bot = await SlackBot.InitializeAsync([slack authentication token], cfg =>
+    {
+        cfg.LoggerFactory = ...;
+        cfg.OnSendMessageFailure = (queue, msg, logger, e) => { };
+    });
+
+### Logging
+
+Provide an implementation of the `Microsoft.Extensions.Logging.ILoggerFactory` class and the SlackBotNet library will output diagnostic logs through it.
+
+### Send Message Failure Handling
+
+Sending messages through the library is done on a background thread to ensure the rate of sent messages is at most 1 per second (see the [Slack API Rate Limits documentation](https://api.slack.com/docs/rate-limits))
+
+A callback matching the signature `Action<ISendMessageQueue, IMessage, ILogger, Exception>` can be provided that gets executed each time a failure happens when the bot attempts to post a message back to Slack.
+
+You can log these failures or set up a retry mechanism to attempt a resend of the message. 
+
+Example that retries sending a message up to 5 times before giving up:
+
+    cfg.OnSendMessageFailure = async (queue, msg, logger, e) =>
+    {
+        if (msg.SendAttempts <= 5)
+        {
+            logger?.LogWarning($"Failed to send message {msg.Text}. Tried {msg.SendAttempts} times");
+            await Task.Delay(1000 * msg.SendAttempts);
+            queue.Enqueue(msg);
+            return;
+        }
+        
+        logger?.LogError($"Gave up trying to send message {msg.Text}");
+    };
 
 ## Matching
 

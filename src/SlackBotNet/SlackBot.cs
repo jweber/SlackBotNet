@@ -20,11 +20,11 @@ namespace SlackBotNet
         private readonly SlackBotState state;
         private readonly ISlackBotConfig config;
         private readonly ILogger<SlackBot> logger;
-
+        private readonly SendMessageQueue sendMessageQueue;
+        
         private ConcurrentQueue<WhenHandler> whenHandlers;
 
         private IDriver driver;
-        private IDisposable sendTimer = null;
 
         private SlackBot(
             SlackBotState state,
@@ -41,6 +41,8 @@ namespace SlackBotNet
             this.messageBus = bus;
 
             this.whenHandlers = new ConcurrentQueue<WhenHandler>();
+            
+            this.sendMessageQueue = new SendMessageQueue(TimeSpan.FromSeconds(1), driver, logger, config.OnSendMessageFailure);
         }
 
         public IReadOnlyState State => this.state;
@@ -58,7 +60,6 @@ namespace SlackBotNet
             var state = await driver.ConnectAsync(bus, logger);
 
             var bot = new SlackBot(state, driver, bus, defaultConfig, logger);
-            bot.StartSendListener();
 
             bot.On<IHubJoined>(msg =>
             {
@@ -126,23 +127,7 @@ namespace SlackBotNet
 
         #region Send
 
-        private readonly ConcurrentQueue<PostMessage> messageQueue = new ConcurrentQueue<PostMessage>();
 
-        /// <summary>
-        /// Limits outgoing messages to 1/second
-        /// </summary>
-        private void StartSendListener()
-        {
-            this.sendTimer = Observable
-                .Timer(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1))
-                .Subscribe(async _ =>
-                {
-                    if (this.messageQueue.TryDequeue(out PostMessage message))
-                    {
-                        await this.driver.SendMessageAsync(message);
-                    }
-               });
-        }
 
         /// <summary>
         /// Posts a message to the <paramref name="hub"/>.
@@ -152,9 +137,10 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
-            => this.SendAsync(hub.Id, message, attachments);        /// <summary>
+            => this.SendAsync(hub.Id, message, attachments);
         
-            /// Posts a message to the <paramref name="hub"/>.
+        /// <summary>
+        /// Posts a message to the <paramref name="hub"/>.
         /// </summary>
         /// <param name="hub"></param>
         /// <param name="attachments"></param>
@@ -170,7 +156,7 @@ namespace SlackBotNet
         /// <returns></returns>
         public Task SendAsync(string channelId, params Attachment[] attachments)
         {
-            this.messageQueue.Enqueue(new PostMessage(channelId, attachments));
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments));
             return Task.CompletedTask;
         }
         
@@ -183,7 +169,7 @@ namespace SlackBotNet
         /// <returns></returns>
         public Task SendAsync(string channelId, string message, params Attachment[] attachments)
         {
-            this.messageQueue.Enqueue(new PostMessage(channelId, message, attachments));
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments));
             return Task.CompletedTask;
         }
 
@@ -197,8 +183,9 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task ReplyAsync(Hub hub, string message, Message replyTo, params Attachment[] attachments)
-            => this.ReplyAsync(hub.Id, message, replyTo, attachments);        /// <summary>
+            => this.ReplyAsync(hub.Id, message, replyTo, attachments);
         
+        /// <summary>
         /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
         /// started then it is created.
         /// </summary>
@@ -223,7 +210,7 @@ namespace SlackBotNet
                 ? replyTo.RawThreadTimestamp
                 : replyTo.ChannelTimestamp;
 
-            this.QueueForSending(new PostMessage(channelId, attachments) { ThreadTimestamp = ts });
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments) { ThreadTimestamp = ts });
             return Task.CompletedTask;
         }
         
@@ -242,11 +229,9 @@ namespace SlackBotNet
                 ? replyTo.RawThreadTimestamp
                 : replyTo.ChannelTimestamp;
 
-            this.QueueForSending(new PostMessage(channelId, message, attachments) { ThreadTimestamp = ts });
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments) { ThreadTimestamp = ts });
             return Task.CompletedTask;
         }
-
-        private void QueueForSending(PostMessage message) => this.messageQueue.Enqueue(message);
 
         #endregion
 
@@ -430,6 +415,9 @@ namespace SlackBotNet
 
         #endregion
 
-        public void Dispose() => this.sendTimer?.Dispose();
+        public void Dispose()
+        {
+            this.driver?.Dispose();
+        }
     }
 }

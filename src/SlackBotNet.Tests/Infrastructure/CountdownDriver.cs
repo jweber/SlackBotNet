@@ -6,14 +6,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Tests.Infrastructure
 {
     class CountdownDriver : IDriver
     {
-        private readonly List<(DateTimeOffset time, PostMessage message)> timings
-            = new List<(DateTimeOffset, PostMessage)>();
+        private readonly List<(DateTimeOffset time, IMessage message)> timings
+            = new List<(DateTimeOffset, IMessage)>();
 
         private readonly CountdownEvent countdown;
 
@@ -25,7 +26,7 @@ namespace SlackBotNet.Tests.Infrastructure
         public IReadOnlyList<DateTimeOffset> RecordedTimings
             => this.timings.Select(m => m.time).ToList();
 
-        public IReadOnlyList<PostMessage> RecordedMessages
+        public IReadOnlyList<IMessage> RecordedMessages
             => this.timings.Select(m => m.message).ToList();
 
         public Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger)
@@ -33,7 +34,7 @@ namespace SlackBotNet.Tests.Infrastructure
 
         public Task DisconnectAsync() => Task.CompletedTask;
 
-        public Task SendMessageAsync(PostMessage message)
+        public Task SendMessageAsync(IMessage message, ILogger logger)
         {
             this.timings.Add((DateTimeOffset.UtcNow, message));
             this.countdown.Signal();

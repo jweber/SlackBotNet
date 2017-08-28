@@ -3,11 +3,11 @@ using System;
 using SlackBotNet.State;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Tests.Infrastructure
 {
-
     internal class TestDriver : IDriver
     {
         private readonly SlackBotState state;
@@ -27,7 +27,7 @@ namespace SlackBotNet.Tests.Infrastructure
             return Task.CompletedTask;
         }
 
-        public Task SendMessageAsync(PostMessage message)
+        public Task SendMessageAsync(IMessage message, ILogger logger)
         {
             return Task.CompletedTask;
         }

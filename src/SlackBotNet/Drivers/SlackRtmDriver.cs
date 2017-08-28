@@ -141,8 +141,8 @@ namespace SlackBotNet.Drivers
             this.websocket.Dispose();
         }
 
-        public Task SendMessageAsync(PostMessage message)
-            => this.SendMessageOverWebApi(message);
+        public Task SendMessageAsync(IMessage message, ILogger logger)
+            => this.SendMessageOverWebApi(message, logger);
 
         private Task SendMessageOverRtmAsync(PostMessage message)
         {
@@ -153,18 +153,33 @@ namespace SlackBotNet.Drivers
                 this.tokenSource.Token);
         }
 
-        private async Task<PostMessageResponse> SendMessageOverWebApi(PostMessage message)
+        private async Task<PostMessageResponse> SendMessageOverWebApi(IMessage message, ILogger logger)
         {
             string postUrl = $"https://slack.com/api/chat.postMessage?token={this.slackToken}";
 
             var requestContent = message.ToKeyValuePairs();
 
-            var response = await HttpClient.PostAsync(postUrl, new FormUrlEncodedContent(requestContent));
+            HttpResponseMessage response;
+            try
+            {
+                response = await HttpClient.PostAsync(postUrl, new FormUrlEncodedContent(requestContent));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Failed to POST message to Slack. Exception: {ex.Message}");
+                throw;
+            }
 
+            if (!response.IsSuccessStatusCode)
+                logger.LogError($"Non-success response was returned when POSTing a message to Slack. Response: {response.StatusCode}; {response.ReasonPhrase}");
+            
             var content = await response.Content.ReadAsStringAsync();
             var parsedContent = JObject.Parse(content);
             bool isOk = parsedContent["ok"].Value<bool>();
 
+            if (!isOk)
+                logger.LogError($"Slack response indicated things were not OK. Here's the content: {content}");
+            
             if (!response.IsSuccessStatusCode || !isOk)
                 throw new HttpRequestException(content);
 

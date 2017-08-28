@@ -2,6 +2,7 @@
 using SlackBotNet.State;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet.Drivers
@@ -10,6 +11,6 @@ namespace SlackBotNet.Drivers
     {
         Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger);
         Task DisconnectAsync();
-        Task SendMessageAsync(PostMessage message);
+        Task SendMessageAsync(IMessage message, ILogger logger);
     }
 }
