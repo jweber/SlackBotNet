@@ -14,6 +14,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resources", "Resources", "{91A9DF53-D69D-49D4-9017-42EE8269A3BD}"
 ProjectSection(SolutionItems) = preProject
 	..\readme.md = ..\readme.md
+	..\pack.sh = ..\pack.sh
 EndProjectSection
 EndProject
 Global
