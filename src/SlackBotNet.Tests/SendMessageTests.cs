@@ -32,9 +32,9 @@ namespace SlackBotNet.Tests
 
             var bot = await SlackBot.InitializeAsync(driver, this.bus);
 
-            await bot.SendAsync("test", "test", null);
-            await bot.SendAsync("test", "test", null);
-            await bot.SendAsync("test", "test", null);
+            await bot.SendAsync("test", "test", false, null);
+            await bot.SendAsync("test", "test", false, null);
+            await bot.SendAsync("test", "test", false, null);
 
             if (!evt.Wait(TimeSpan.FromSeconds(4)))
                 Assert.True(false, "3 messages were not recorded as being sent");
