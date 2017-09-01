@@ -22,6 +22,15 @@ namespace SlackBotNet
         /// <param name="attachments">Optional list of attachments to add to the message.</param>
         /// <returns></returns>
         Task PostMessage(string message, params Attachment[] attachments);
+        
+        /// <summary>
+        /// Sends a message to the channel that the bot is listening on.
+        /// </summary>
+        /// <param name="message">The message text. Emoji and markdown are supported.</param>
+        /// <param name="linkNames"></param>
+        /// <param name="attachments">Optional list of attachments to add to the message.</param>
+        /// <returns></returns>
+        Task PostMessage(string message, bool linkNames, params Attachment[] attachments);
 
         /// <summary>
         /// Sends a message to the channel that the bot is listening on.
@@ -39,7 +48,7 @@ namespace SlackBotNet
         /// <param name="match">Criteria that the message must meet</param>
         /// <param name="onNotMatch">If a message does not meet the <paramref name="match"/> criteria, this action is invoked.</param>
         /// <returns></returns>
-        Task<IReply> WaitForReply(MessageMatcher match = null, Action <Message> onNotMatch = null);
+        Task<IReply> WaitForReply(MessageMatcher match = null, Action<Message> onNotMatch = null);
 
         /// <summary>
         /// Ends the conversation.
@@ -106,9 +115,20 @@ namespace SlackBotNet
                 return Task.CompletedTask;
 
             if (this.IsThreaded)
-                return this.bot.ReplyAsync(this.rootMessage.Channel, message, this.rootMessage, attachments);
+                return this.bot.ReplyAsync(this.rootMessage.Channel, message, this.rootMessage, false, attachments);
 
-            return this.bot.SendAsync(this.rootMessage.Channel, message, attachments);
+            return this.bot.SendAsync(this.rootMessage.Channel, message, false, attachments);
+        }
+
+        public Task PostMessage(string message, bool linkNames, params Attachment[] attachments)
+        {
+            if (this.tokenSource.IsCancellationRequested)
+                return Task.CompletedTask;
+
+            if (this.IsThreaded)
+                return this.bot.ReplyAsync(this.rootMessage.Channel, message, this.rootMessage, linkNames, attachments);
+
+            return this.bot.SendAsync(this.rootMessage.Channel, message, linkNames, attachments);
         }
 
         public Task PostMessage(params Attachment[] attachments)
@@ -117,9 +137,9 @@ namespace SlackBotNet
                 return Task.CompletedTask;
 
             if (this.IsThreaded)
-                return this.bot.ReplyAsync(this.rootMessage.Channel, this.rootMessage, attachments);
+                return this.bot.ReplyAsync(this.rootMessage.Channel, this.rootMessage, false, attachments);
 
-            return this.bot.SendAsync(this.rootMessage.Channel, attachments);
+            return this.bot.SendAsync(this.rootMessage.Channel, false, attachments);
         }
 
         public async Task<IReply> WaitForReply(MessageMatcher match = null, Action<Message> onNotMatch = null)
@@ -164,7 +184,7 @@ namespace SlackBotNet
                 this.modes |= Modes.StartThread;
                 this.rootMessage = reply;
             }
-            
+
             return new Reply(
                 this.bot.State.GetUser(reply.User),
                 reply.Text,
@@ -206,6 +226,6 @@ namespace SlackBotNet
         {
             this.End();
             this.tokenSource.Dispose();
-        } 
+        }
     }
 }

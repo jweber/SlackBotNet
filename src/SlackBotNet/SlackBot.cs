@@ -21,7 +21,7 @@ namespace SlackBotNet
         private readonly ISlackBotConfig config;
         private readonly ILogger<SlackBot> logger;
         private readonly SendMessageQueue sendMessageQueue;
-        
+
         private ConcurrentQueue<WhenHandler> whenHandlers;
 
         private IDriver driver;
@@ -36,12 +36,12 @@ namespace SlackBotNet
             this.state = state;
             this.config = config;
             this.logger = logger;
-            
+
             this.driver = driver;
             this.messageBus = bus;
 
             this.whenHandlers = new ConcurrentQueue<WhenHandler>();
-            
+
             this.sendMessageQueue = new SendMessageQueue(TimeSpan.FromSeconds(1), driver, logger, config.OnSendMessageFailure);
         }
 
@@ -56,7 +56,7 @@ namespace SlackBotNet
             config?.Invoke(defaultConfig);
 
             var logger = defaultConfig.LoggerFactory.CreateLogger<SlackBot>();
-            
+
             var state = await driver.ConnectAsync(bus, logger);
 
             var bot = new SlackBot(state, driver, bus, defaultConfig, logger);
@@ -133,12 +133,34 @@ namespace SlackBotNet
         /// Posts a message to the <paramref name="hub"/>.
         /// </summary>
         /// <param name="hub"></param>
-        /// <param name="message"></param>
+        /// <param name="message"></param      
+        /// <param name="linkNames"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(Hub hub, string message, bool linkNames, params Attachment[] attachments)
+            => this.SendAsync(hub.Id, message, linkNames, attachments);
+
+
+        /// <summary>
+        /// Posts a message to the <paramref name="hub"/>.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="message"></param      
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
-            => this.SendAsync(hub.Id, message, attachments);
-        
+            => this.SendAsync(hub.Id, message, false, attachments);
+
+        /// <summary>
+        /// Posts a message to the <paramref name="hub"/>.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="linkNames"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(Hub hub, bool linkNames, params Attachment[] attachments)
+            => this.SendAsync(hub.Id, linkNames, attachments);
+
         /// <summary>
         /// Posts a message to the <paramref name="hub"/>.
         /// </summary>
@@ -146,7 +168,20 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task SendAsync(Hub hub, params Attachment[] attachments)
-            => this.SendAsync(hub.Id, attachments);
+            => this.SendAsync(hub.Id, false, attachments);
+
+        /// <summary>
+        /// Posts a message to the <paramref name="channelId"/>.
+        /// </summary>
+        /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="linkNames"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task SendAsync(string channelId, bool linkNames, params Attachment[] attachments)
+        {
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments) { LinkNames = linkNames ? true : default(bool?) });
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Posts a message to the <paramref name="channelId"/>.
@@ -159,19 +194,34 @@ namespace SlackBotNet
             this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments));
             return Task.CompletedTask;
         }
-        
+
         /// <summary>
         /// Posts a message to the <paramref name="channelId"/>.
         /// </summary>
         /// <param name="channelId">The channel/group/dm id.</param>
+        /// <param name="linkNames"></param>
         /// <param name="message"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
-        public Task SendAsync(string channelId, string message, params Attachment[] attachments)
+        public Task SendAsync(string channelId, string message, bool linkNames, params Attachment[] attachments)
         {
-            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments));
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments) { LinkNames = linkNames ? true : default(bool?) });
             return Task.CompletedTask;
         }
+
+        /// <summary>
+        /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="message"></param>
+        /// <param name="linkNames"></param>
+        /// <param name="replyTo"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(Hub hub, string message, Message replyTo, bool linkNames, params Attachment[] attachments)
+            => this.ReplyAsync(hub.Id, message, replyTo, linkNames, attachments);
+
 
         /// <summary>
         /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
@@ -183,8 +233,20 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task ReplyAsync(Hub hub, string message, Message replyTo, params Attachment[] attachments)
-            => this.ReplyAsync(hub.Id, message, replyTo, attachments);
-        
+            => this.ReplyAsync(hub.Id, message, replyTo, false, attachments);
+
+        /// <summary>
+        /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
+        /// started then it is created.
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="replyTo"></param>
+        /// <param name="linkNames"></param>
+        /// <param name="attachments"></param>
+        /// <returns></returns>
+        public Task ReplyAsync(Hub hub, Message replyTo, bool linkNames, params Attachment[] attachments)
+            => this.ReplyAsync(hub.Id, replyTo, linkNames, attachments);
+
         /// <summary>
         /// Posts a message to a thread in the <paramref name="hub"/>. If the thread is not already
         /// started then it is created.
@@ -194,7 +256,7 @@ namespace SlackBotNet
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task ReplyAsync(Hub hub, Message replyTo, params Attachment[] attachments)
-            => this.ReplyAsync(hub.Id, replyTo, attachments);
+            => this.ReplyAsync(hub.Id, replyTo, false, attachments);
 
         /// <summary>
         /// Posts a message to a thread in the <paramref name="channelId"/>. If the thread is not already
@@ -202,18 +264,19 @@ namespace SlackBotNet
         /// </summary>
         /// <param name="channelId">The channel/group/dm id.</param>
         /// <param name="replyTo"></param>
+        /// <param name="linkNames"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
-        public Task ReplyAsync(string channelId, Message replyTo, params Attachment[] attachments)
+        public Task ReplyAsync(string channelId, Message replyTo, bool linkNames, params Attachment[] attachments)
         {
             var ts = !string.IsNullOrEmpty(replyTo.RawThreadTimestamp)
                 ? replyTo.RawThreadTimestamp
                 : replyTo.ChannelTimestamp;
-
-            this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments) { ThreadTimestamp = ts });
+            
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, attachments) { ThreadTimestamp = ts, LinkNames = linkNames ? true : default(bool?) });
             return Task.CompletedTask;
         }
-        
+
         /// <summary>
         /// Posts a message to a thread in the <paramref name="channelId"/>. If the thread is not already
         /// started then it is created.
@@ -221,15 +284,16 @@ namespace SlackBotNet
         /// <param name="channelId">The channel/group/dm id.</param>
         /// <param name="message"></param>
         /// <param name="replyTo"></param>
+        /// <param name="linkNames"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
-        public Task ReplyAsync(string channelId, string message, Message replyTo, params Attachment[] attachments)
+        public Task ReplyAsync(string channelId, string message, Message replyTo, bool? linkNames, params Attachment[] attachments)
         {
             var ts = !string.IsNullOrEmpty(replyTo.RawThreadTimestamp)
                 ? replyTo.RawThreadTimestamp
                 : replyTo.ChannelTimestamp;
-
-            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments) { ThreadTimestamp = ts });
+            var shouldLinkNames = linkNames.HasValue && linkNames.Value ? true : default(bool?);
+            this.sendMessageQueue.Enqueue(new PostMessage(channelId, message, attachments) { ThreadTimestamp = ts, LinkNames = shouldLinkNames });
             return Task.CompletedTask;
         }
 
@@ -251,7 +315,7 @@ namespace SlackBotNet
         /// <param name="handler"></param>
         /// <returns></returns>
         public IDisposable On<TMessage>(Action<TMessage> handler)
-            where TMessage : IRtmMessage 
+            where TMessage : IRtmMessage
             => this.messageBus.Observe<TMessage>().Subscribe(handler);
 
         /// <summary>
@@ -305,9 +369,9 @@ namespace SlackBotNet
         /// <returns></returns>
         public IWhenHandler When(MessageMatcher match, HubType hubs, Modes modes, Func<IConversation, Task> handler)
         {
-            bool MessageAddressesBot(Message msg) => 
-                (modes & Modes.ObserveAllMessages) == Modes.ObserveAllMessages 
-                || msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase) 
+            bool MessageAddressesBot(Message msg) =>
+                (modes & Modes.ObserveAllMessages) == Modes.ObserveAllMessages
+                || msg.Text.Contains(this.state.BotUserId, StringComparison.OrdinalIgnoreCase)
                 || msg.Text.Contains(this.state.BotUsername, StringComparison.OrdinalIgnoreCase);
 
             var whenHandler = new WhenHandler(this,
@@ -325,9 +389,9 @@ namespace SlackBotNet
                         if (!MessageAddressesBot(msg))
                             return MessageMatcher.NoMatch;
                     }
-                    
+
                     match.SetupLogger(this.config.LoggerFactory);
-                    
+
                     return match.GetMatches(msg);
                 },
                 async (msg, matches) =>
@@ -358,12 +422,12 @@ namespace SlackBotNet
 
         class WhenHandler : IWhenHandler
         {
-            internal event Action<Message, Exception> OnExceptionEvt = delegate {};
+            internal event Action<Message, Exception> OnExceptionEvt = delegate { };
 
             private readonly SlackBot bot;
 
             public WhenHandler(
-                SlackBot bot, 
+                SlackBot bot,
                 Func<Message, Task<Match[]>> matchGenerator,
                 Func<Message, Match[], Task<(bool success, Exception ex)>> messageHandler)
             {
