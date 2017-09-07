@@ -9,6 +9,7 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -27,6 +28,7 @@ namespace SlackBotNet.Drivers
         private CancellationTokenSource tokenSource;
 
         private static readonly SemaphoreSlim PingSemaphore = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim ReconnectSemaphore = new SemaphoreSlim(1, 1);
         
         public SlackRtmDriver(string slackToken)
         {
@@ -40,14 +42,23 @@ namespace SlackBotNet.Drivers
                 .Timer(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5))
                 .Subscribe(async _ =>
                 {
-                    if (!await PingSemaphore.WaitAsync(100, this.tokenSource.Token))
+                    if (ReconnectSemaphore.CurrentCount == 0)
+                    {
+                        logger.LogDebug($"Not pinging because there is an active socket reconnect attempt in process");
                         return;
+                    }
 
+                    if (PingSemaphore.CurrentCount == 0)
+                        return;
+                    
                     try
                     {
+                        if (!await PingSemaphore.WaitAsync(100))
+                            return;
+                        
                         if (this.websocket == null)
                             return;
-
+                        
                         if (this.websocket.State != WebSocketState.Open)
                         {
                             logger.LogWarning($"Not pinging because the socket is not open. Current state is: {this.websocket.State}");
@@ -91,23 +102,65 @@ namespace SlackBotNet.Drivers
                             logger.LogError($"Failed to receive the Pong message from the Slack RTM socket. Attempting to reconnect. Exception: {ex.Message}");
 
                             await this.ReconnectRtmAsync(bus, logger);
+                            return;
                         }
                     }
                     finally
                     {
-                        PingSemaphore.Release();
+                        try
+                        {
+                            PingSemaphore.Release();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError($"PingSemaphore Release. Exception: {ex.Message}");
+                        }
                     }
                 });
 
             return this.ConnectRtmAsync(bus, logger);
         }
 
-        private Task<SlackBotState> ReconnectRtmAsync(IMessageBus bus, ILogger logger)
+        [ItemCanBeNull]
+        private async Task<SlackBotState> ReconnectRtmAsync(IMessageBus bus, ILogger logger)
         {
-            this.tokenSource.Cancel();
-            this.tokenSource = new CancellationTokenSource();
+            if (ReconnectSemaphore.CurrentCount == 0)
+                return null;
             
-            return this.ConnectRtmAsync(bus, logger);
+            try
+            {
+                if (!await ReconnectSemaphore.WaitAsync(100))
+                    return null;
+
+                this.tokenSource.Cancel();
+                this.tokenSource = new CancellationTokenSource();
+
+                int reconnectAttempts = 0;
+                while (true)
+                {
+                    try
+                    {
+                        return await this.ConnectRtmAsync(bus, logger);
+                    }
+                    catch (Exception ex)
+                    {
+                        var delay = TimeSpan.FromSeconds(Math.Min(60 * 2, Math.Pow(2d, reconnectAttempts++)));
+                        logger.LogError($"Failed to reconnect to the Slack RTM socket after {reconnectAttempts} attempts. Retrying again after {delay.TotalSeconds} seconds. Exception: {ex.Message}");
+                        await Task.Delay(delay);
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    ReconnectSemaphore.Release();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"ReconnectSemaphore Release. Exception: {ex.Message}");
+                }
+            }
         }
         
         private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus, ILogger logger)
