@@ -40,6 +40,14 @@ namespace SlackBotNet
         Task PostMessage(params Attachment[] attachments);
 
         /// <summary>
+        /// Sends a message to the channel that the bot is listening on.
+        /// </summary>
+        /// <param name="linkNames"><c>true</c> if should link mentions; <c>false</c> otherwise</param>
+        /// <param name="attachments">List of attachments to add to the message.</param>
+        /// <returns></returns>
+        Task PostMessage(bool linkNames = false, params Attachment[] attachments);
+
+        /// <summary>
         /// Tells the bot to wait until a message comes in that meets the following criteria:
         /// <para>1. If the bot is conversing directly in a channel, another message is posted by original User that triggered the bot</para>
         /// <para>2. If the bot is conversing in a thread, any message posted in that thread will be looked at</para>
@@ -130,8 +138,12 @@ namespace SlackBotNet
 
             return this.bot.SendAsync(this.rootMessage.Channel, message, linkNames, attachments);
         }
-
         public Task PostMessage(params Attachment[] attachments)
+        {
+            return PostMessage(false, attachments);
+        }
+
+        public Task PostMessage(bool linkNames, params Attachment[] attachments)
         {
             if (this.tokenSource.IsCancellationRequested)
                 return Task.CompletedTask;
@@ -139,7 +151,7 @@ namespace SlackBotNet
             if (this.IsThreaded)
                 return this.bot.ReplyAsync(this.rootMessage.Channel, this.rootMessage, false, attachments);
 
-            return this.bot.SendAsync(this.rootMessage.Channel, false, attachments);
+            return this.bot.SendAsync(this.rootMessage.Channel, linkNames, attachments);
         }
 
         public async Task<IReply> WaitForReply(MessageMatcher match = null, Action<Message> onNotMatch = null)
