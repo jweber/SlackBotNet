@@ -53,6 +53,9 @@ namespace SlackBotNet.Messages.WebApi
 
         [JsonProperty(PropertyName = "ts")]
         public int? Timestamp { get; set; }
+
+        [JsonProperty(PropertyName = "mrkdwn_in")]
+        public ICollection<string> FieldsWithMarkdown { get; set; }
     }
 
     [JsonConverter(typeof(ToStringJsonConverter))]
