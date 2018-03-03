@@ -54,6 +54,12 @@ namespace SlackBotNet.Messages.WebApi
         [JsonProperty(PropertyName = "ts")]
         public int? Timestamp { get; set; }
 
+        [JsonProperty("callback_id")]
+        public string CallBackId;
+
+        [JsonProperty("actions")]
+        public List<AttachmentAction> Actions;
+
         [JsonProperty(PropertyName = "mrkdwn_in")]
         public ICollection<string> FieldsWithMarkdown { get; set; }
     }
@@ -74,4 +80,40 @@ namespace SlackBotNet.Messages.WebApi
 
         public static implicit operator AttachmentColor(string hex) => FromHex(hex);
     }
+
+    [JsonConverter(typeof(ToStringJsonConverter))]
+    public class AttachmentAction
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("text")]
+        public string Text { get; set; }
+
+        [JsonProperty("type")]
+        public string ActionType { get; set; }
+
+        [JsonProperty("value")]
+        public string Value { get; set; }
+        
+        [JsonProperty("data_source")]
+        public string DataSource { get; set; }
+
+        [JsonProperty("selected_options")]
+        public List<AttachmentActionOption> SelectedOptions;
+
+        [JsonProperty("options")]
+        public List<AttachmentActionOption> Options { get; set; }
+    }
+
+    [JsonConverter(typeof(ToStringJsonConverter))]
+    public class AttachmentActionOption
+    {
+        [JsonProperty("text")]
+        public string Text { get; set; }
+
+        [JsonProperty("value")]
+        public string Value { get; set; }
+    }
+
 }
