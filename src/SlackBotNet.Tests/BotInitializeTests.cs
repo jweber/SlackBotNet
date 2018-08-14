@@ -50,7 +50,7 @@ namespace SlackBotNet.Tests
             Assert.NotNull(hub);
 
             Assert.Equal(hub.Id, msg.Channel.Id);
-            Assert.True(hub.Name.Contains(msg.Channel.Name));
+            Assert.Contains(msg.Channel.Name, hub.Name);
             Assert.Equal(hub.HubType, msg.HubType);
         }
 

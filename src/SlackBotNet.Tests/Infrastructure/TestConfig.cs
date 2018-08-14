@@ -10,6 +10,6 @@ namespace SlackBotNet.Tests.Infrastructure
     {
         public WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
         public ILoggerFactory LoggerFactory { get; set; }
-        public Action<ISendMessageQueue, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
+        public Action<IThrottleQueue<IMessage>, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
     }
 }

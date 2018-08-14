@@ -11,7 +11,7 @@ namespace SlackBotNet
     {
         WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
         ILoggerFactory LoggerFactory { get; set; }
-        Action<ISendMessageQueue, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
+        Action<IThrottleQueue<IMessage>, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
     }
 
     public enum WhenHandlerMatchMode
@@ -35,6 +35,6 @@ namespace SlackBotNet
 
         public WhenHandlerMatchMode WhenHandlerMatchMode { get; set; }
         public ILoggerFactory LoggerFactory { get; set; }
-        public Action<ISendMessageQueue, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
+        public Action<IThrottleQueue<IMessage>, IMessage, ILogger, Exception> OnSendMessageFailure { get; set; }
     }
 }

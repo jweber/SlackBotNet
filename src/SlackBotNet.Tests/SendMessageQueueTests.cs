@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SlackBotNet.Drivers;
+using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
 using Xunit;
 
@@ -16,8 +17,12 @@ namespace SlackBotNet.Tests
         {
             var driver = Substitute.For<IDriver>();
             var logger = Substitute.For<ILogger>();
-            
-            var q = new SendMessageQueue(TimeSpan.Zero, driver, logger, null);
+
+            var q = new MessageThrottleQueue(
+                TimeSpan.Zero,
+                driver,
+                logger,
+                null);
 
             var message = new PostMessage("channel");
             q.Enqueue(message);
@@ -44,19 +49,23 @@ namespace SlackBotNet.Tests
 
             var resetEvent = new AutoResetEvent(false);
             
-            var q = new SendMessageQueue(TimeSpan.Zero, driver, logger, async (queue, msg, l, ex) =>
-            {
-                await Task.Delay(10);
-                
-                Assert.Same(msg, message);
-                Assert.Same(logger, l);
-                Assert.Equal("test", ex.Message);
-                Assert.Equal(1, msg.SendAttempts);
-                
-                queue.Enqueue(msg);
-                
-                resetEvent.Set();
-            });
+            var q = new MessageThrottleQueue(
+                TimeSpan.Zero, 
+                driver, 
+                logger, 
+                async (queue, msg, l, ex) =>
+                {
+                    await Task.Delay(10);
+                    
+                    Assert.Same(msg, message);
+                    Assert.Same(logger, l);
+                    Assert.Equal("test", ex.Message);
+                    Assert.Equal(1, msg.SendAttempts);
+                    
+                    queue.Enqueue(msg);
+                    
+                    resetEvent.Set();
+                });
 
             q.Enqueue(message);
 

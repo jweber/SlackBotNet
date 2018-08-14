@@ -41,6 +41,8 @@ namespace SlackBotNet.Tests.Infrastructure
             return Task.CompletedTask;
         }
 
+        public Task UploadFileAsync(File file, ILogger logger) => Task.CompletedTask;
+
         public void Dispose() => this.countdown.Dispose();
     }
 }

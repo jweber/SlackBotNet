@@ -48,8 +48,14 @@ namespace SlackBotNet.Tests
                         driver
                             .RecordedTimings[Math.Min(p1, p2)]);
 
-            Assert.True(TimeBetween(0, 1) > TimeSpan.FromSeconds(1));
-            Assert.True(TimeBetween(1, 2) > TimeSpan.FromSeconds(1));
+            var first = TimeBetween(0, 1);
+            var second = TimeBetween(1, 2);
+
+            // allow some wiggle room with timing
+            var measure = TimeSpan.FromSeconds(0.98);
+            
+            Assert.True(TimeBetween(0, 1) >= measure, $"Expected {first} >= {measure}");
+            Assert.True(TimeBetween(1, 2) >= measure, $"Expected {second} >= {measure}");
         }
 
         [Theory]

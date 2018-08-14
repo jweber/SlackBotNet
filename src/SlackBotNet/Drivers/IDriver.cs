@@ -12,5 +12,6 @@ namespace SlackBotNet.Drivers
         Task<SlackBotState> ConnectAsync(IMessageBus bus, ILogger logger);
         Task DisconnectAsync();
         Task SendMessageAsync(IMessage message, ILogger logger);
+        Task UploadFileAsync(File file, ILogger logger);
     }
 }

@@ -28,7 +28,7 @@ namespace SlackBotNet.Tests
             var matcher = new RegexMatcher("world$");
             var matches = await matcher.GetMatches(message);
 
-            Assert.Equal(1, matches.Length);
+            Assert.Single(matches);
             Assert.Equal("world", matches[0].Text);
             Assert.Equal("0", matches[0].Category);
         }
@@ -71,7 +71,7 @@ namespace SlackBotNet.Tests
             var matcher = new TextMatcher("hello world");
             var matches = await matcher.GetMatches(message);
 
-            Assert.Equal(1, matches.Length);
+            Assert.Single(matches);
             Assert.Equal("hello world", matches[0].Text);
         }
 
@@ -96,7 +96,7 @@ namespace SlackBotNet.Tests
             var matcher = new PredicateMatcher(msg => msg.Text.Equals("HELLO WORLD", StringComparison.OrdinalIgnoreCase));
             var matches = await matcher.GetMatches(message);
 
-            Assert.Equal(1, matches.Length);
+            Assert.Single(matches);
             Assert.Equal(message.Text, matches[0].Text);
         }
     }

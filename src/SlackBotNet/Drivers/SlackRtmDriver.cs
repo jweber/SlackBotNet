@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using SlackBotNet.Messages;
 using SlackBotNet.Messages.WebApi;
+using File = SlackBotNet.Messages.WebApi.File;
 
 namespace SlackBotNet.Drivers
 {
@@ -197,6 +198,9 @@ namespace SlackBotNet.Drivers
         public Task SendMessageAsync(IMessage message, ILogger logger)
             => this.SendMessageOverWebApi(message, logger);
 
+        public Task UploadFileAsync(File file, ILogger logger)
+            => this.UploadFileOverWebApi(file, logger);
+
         private Task SendMessageOverRtmAsync(PostMessage message)
         {
             return this.websocket.SendAsync(
@@ -206,6 +210,38 @@ namespace SlackBotNet.Drivers
                 this.tokenSource.Token);
         }
 
+        private async Task<FilesUploadResponse> UploadFileOverWebApi(File file, ILogger logger)
+        {
+            string postUrl = $"https://slack.com/api/files.upload?token={this.slackToken}";
+            var requestContent = file.ToKeyValuePairs();
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await HttpClient.PostAsync(postUrl, new FormUrlEncodedContent(requestContent));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Failed to POST file upload to Slack. Exception: {ex.Message}");
+                throw;
+            }
+            
+            if (!response.IsSuccessStatusCode)
+                logger.LogError($"Non-success response was returned when POSTing a file upload to Slack. Response: {response.StatusCode}; {response.ReasonPhrase}");
+
+            var content = await response.Content.ReadAsStringAsync();
+            var parsedContent = JObject.Parse(content);
+            bool isOk = parsedContent["ok"].Value<bool>();
+            
+            if (!isOk)
+                logger.LogError($"Slack response indicated things were not OK with the file upload. Here's the content: {content}");
+
+            if (!response.IsSuccessStatusCode && !isOk)
+                throw new HttpRequestException(content);
+
+            return JsonConvert.DeserializeObject<FilesUploadResponse>(content);
+        }
+        
         private async Task<PostMessageResponse> SendMessageOverWebApi(IMessage message, ILogger logger)
         {
             string postUrl = $"https://slack.com/api/chat.postMessage?token={this.slackToken}";

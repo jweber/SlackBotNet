@@ -20,7 +20,8 @@ namespace SlackBotNet
         private readonly SlackBotState state;
         private readonly ISlackBotConfig config;
         private readonly ILogger<SlackBot> logger;
-        private readonly SendMessageQueue sendMessageQueue;
+        private readonly ThrottleQueue<IMessage> sendMessageQueue;
+        private readonly ThrottleQueue<File> uploadFileQueue;
 
         private ConcurrentQueue<WhenHandler> whenHandlers;
 
@@ -42,7 +43,20 @@ namespace SlackBotNet
 
             this.whenHandlers = new ConcurrentQueue<WhenHandler>();
 
-            this.sendMessageQueue = new SendMessageQueue(TimeSpan.FromSeconds(1), driver, logger, config.OnSendMessageFailure);
+            this.sendMessageQueue = new MessageThrottleQueue(
+                TimeSpan.FromSeconds(1.0), // ~1/sec (see: https://api.slack.com/methods/chat.postMessage)
+                driver,
+                logger,
+                (queue, msg, lg, ex) =>
+                {
+                    config?.OnSendMessageFailure?.Invoke(queue, msg, lg, ex);
+                });
+            
+            this.uploadFileQueue = new ThrottleQueue<File>(
+                TimeSpan.FromSeconds(3), // ~20/min (see: https://api.slack.com/methods/files.upload)
+                logger,
+                this.driver.UploadFileAsync,
+                null);
         }
 
         public IReadOnlyState State => this.state;
@@ -127,8 +141,21 @@ namespace SlackBotNet
 
         #region Send
 
+        /// <summary>
+        /// Uploads a file to the given <paramref name="hub"/>
+        /// </summary>
+        /// <param name="hub"></param>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        public Task UploadFileAsync(Hub hub, File file)
+        {
+            if (string.IsNullOrEmpty(file.Channels))
+                file.Channels = hub.Id;
 
-
+            this.uploadFileQueue.Enqueue(file);
+            return Task.CompletedTask;
+        }
+        
         /// <summary>
         /// Posts a message to the <paramref name="hub"/>.
         /// </summary>

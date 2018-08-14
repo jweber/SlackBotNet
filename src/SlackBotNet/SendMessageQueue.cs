@@ -10,24 +10,47 @@ using SlackBotNet.Messages.WebApi;
 
 namespace SlackBotNet
 {
-    public interface ISendMessageQueue
+    public interface IThrottleQueue<TMessage>
+        where TMessage : class
     {
-        void Enqueue(IMessage message);
+        void Enqueue(TMessage message);
+    }
+
+    internal class MessageThrottleQueue : ThrottleQueue<IMessage>
+    {
+        public MessageThrottleQueue(
+            TimeSpan timespan,
+            IDriver driver, 
+            ILogger logger, 
+            Action<IThrottleQueue<IMessage>, IMessage, ILogger, Exception> sendErrorHandler) 
+            : base(
+                timespan,
+                logger, 
+                driver.SendMessageAsync, 
+                (q, msg, lg, ex) =>
+                {
+                    if (msg is PostMessage pm)
+                        pm.SendAttempts += 1;
+
+                    sendErrorHandler?.Invoke(q, msg, lg, ex);
+                })
+        { }
     }
     
-    internal class SendMessageQueue : ISendMessageQueue, IDisposable
+    internal class ThrottleQueue<TMessage> : IThrottleQueue<TMessage>, IDisposable
+        where TMessage : class
     {
         private readonly ILogger logger;
-        private readonly ConcurrentQueue<IMessage> messageQueue = new ConcurrentQueue<IMessage>();
+        private readonly ConcurrentQueue<TMessage> messageQueue = new ConcurrentQueue<TMessage>();
         private readonly IDisposable sendTimer;
 
         private bool isDisposing = false;
         
-        public SendMessageQueue(
+        public ThrottleQueue(
             TimeSpan interval,
-            IDriver driver, 
             ILogger logger, 
-            Action<ISendMessageQueue, IMessage, ILogger, Exception> sendErrorHandler)
+            Func<TMessage, ILogger, Task> handler,
+            Action<IThrottleQueue<TMessage>, TMessage, ILogger, Exception> sendErrorHandler)
         {
             this.logger = logger;
             
@@ -35,17 +58,14 @@ namespace SlackBotNet
                 .Timer(TimeSpan.Zero, interval)
                 .Subscribe(async _ =>
                 {
-                    if (this.messageQueue.TryDequeue(out IMessage message))
+                    if (this.messageQueue.TryDequeue(out TMessage message))
                     {
                         try
                         {
-                            await driver.SendMessageAsync(message, logger);
+                            await handler(message, logger);
                         }
                         catch (Exception e)
                         {
-                            if (message is PostMessage pm)
-                                pm.SendAttempts += 1;
-
                             sendErrorHandler?.Invoke(this, message, logger, e);
                             
                             if (sendErrorHandler == null)
@@ -55,7 +75,7 @@ namespace SlackBotNet
                 });
         }
 
-        public void Enqueue(IMessage message)
+        public void Enqueue(TMessage message)
         {
             if (this.isDisposing)
             {
