@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using SlackBotNet.State;
 using System;
 using System.IO;
@@ -62,7 +62,9 @@ namespace SlackBotNet.Drivers
                         
                         if (this.websocket.State != WebSocketState.Open)
                         {
-                            logger.LogWarning($"Not pinging because the socket is not open. Current state is: {this.websocket.State}");
+                            logger.LogWarning($"Not pinging because the socket is not open. Current state is: {this.websocket.State}. Attempting to reconnect.");
+
+                            await this.ReconnectRtmAsync(bus, logger);
                             return;
                         }
                     
