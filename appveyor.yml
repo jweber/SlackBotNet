@@ -1,0 +1,47 @@
+environment:
+  VERSION_MAJOR: 1
+  VERSION_MINOR: 0
+  VERSION_PATCH: 0
+
+image: Visual Studio 2017
+
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  version: '{version}'
+  package_version: '{version}'
+  assembly_version: '{version}'
+  file_version: '{version}'
+  informational_version: '{version}'
+
+build_script:
+  - cmd: >-
+      dotnet --version
+      dotnet restore src/SlackBotNet/SlackBotNet.csproj
+      dotnet build src/
+
+      dotnet pack src/SlackBotNet/SlackBotNet.csproj --output ../../deploy --include-symbols --include-source
+      dotnet pack src/SlackBotNet.Matcher.Luis/SlackBotNet.Matcher.Luis.csproj --output ../../deploy --include-symbols --include-source
+
+test_script:
+  - cmd: >-
+      dotnet restore src/SlackBotNet.Tests/SlackBotNet.Tests.csproj
+      cd src/SlackBotNet.Tests
+      dotnet test
+
+artifacts:
+  - path: deploy/*.nupkg
+    name: NuGet
+
+for:
+-
+  branches:
+    except: 
+      - release
+  version: $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)-ci.{build}
+
+-
+  branches:
+    only:
+      - release
+  version: $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH)
