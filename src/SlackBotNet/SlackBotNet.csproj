@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard1.3</TargetFramework>
+    <NoWarn>1701;1702;1591</NoWarn>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\SlackBotNet.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
     <PackageId>SlackBotNet</PackageId>
     <PackageVersion>0.8.9</PackageVersion>
     <Authors>j.weber</Authors>
@@ -29,7 +33,4 @@
     <PackageReference Include="System.Threading.Thread" Version="4.0.0" />
     <PackageReference Include="System.ValueTuple" Version="4.3.1" />
   </ItemGroup>
-  <PropertyGroup Condition="'$(Platform)'=='AnyCPU'">
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\SlackBotNet.xml</DocumentationFile>
-  </PropertyGroup>
 </Project>

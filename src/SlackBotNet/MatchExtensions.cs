@@ -72,7 +72,7 @@ namespace SlackBotNet
 
         /// <summary>
         /// Combines two <see cref="MessageMatcher"/> instances and returns success if both match.
-        /// The <c>&&</c> operator is the same as using this matcher.
+        /// The <c>&amp;&amp;</c> operator is the same as using this matcher.
         /// </summary>
         /// <param name="left"></param>
         /// <param name="right"></param>

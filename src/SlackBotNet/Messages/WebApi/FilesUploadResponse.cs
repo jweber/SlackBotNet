@@ -3,9 +3,8 @@ using Newtonsoft.Json;
 namespace SlackBotNet.Messages.WebApi
 {
     /// <summary>
-    /// 
+    /// See: https://api.slack.com/methods/files.upload
     /// </summary>
-    /// <see cref="https://api.slack.com/methods/files.upload"/>
     public class FilesUploadResponse
     {
         [JsonProperty("ok")]

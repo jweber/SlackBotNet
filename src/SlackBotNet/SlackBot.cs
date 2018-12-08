@@ -160,7 +160,7 @@ namespace SlackBotNet
         /// Posts a message to the <paramref name="hub"/>.
         /// </summary>
         /// <param name="hub"></param>
-        /// <param name="message"></param      
+        /// <param name="message"></param>
         /// <param name="linkNames"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
@@ -172,7 +172,7 @@ namespace SlackBotNet
         /// Posts a message to the <paramref name="hub"/>.
         /// </summary>
         /// <param name="hub"></param>
-        /// <param name="message"></param      
+        /// <param name="message"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
         public Task SendAsync(Hub hub, string message, params Attachment[] attachments)
