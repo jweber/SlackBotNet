@@ -1,5 +1,8 @@
 # SlackBotNet
 
+[![Build status](https://ci.appveyor.com/api/projects/status/acc3tpryt8td9c7p?svg=true)](https://ci.appveyor.com/project/jweber/slackbotnet)
+[![Nuget](https://img.shields.io/nuget/v/SlackBotNet.svg)](https://www.nuget.org/packages/SlackBotNet/)
+
 .NET Standard compatible client for the [Real Time Messaging API](https://api.slack.com/rtm).
 
 NOTE: This library is not currently full-featured and may have unexpected issues. Please open issues when they are discovered. Pull requests are greatly appreciated.

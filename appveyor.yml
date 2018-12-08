@@ -36,6 +36,13 @@ artifacts:
   - path: deploy/*.nupkg
     name: NuGet
 
+deploy:
+  - provider: NuGet
+    api_key:
+      secure: 2M5tp95CFG3/XA9wTWhYASKrpi7vpbbSlxdIy9it7YD/Dyap3zxkcBfOFDCGOcVx
+    on:
+      branch: release
+
 for:
 -
   branches:
