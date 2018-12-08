@@ -20,7 +20,7 @@ Listen for messages sent to the bot:
 
     bot.When(Matches.Text("hello"), async conv =>
     {
-        await conv.ReplyAsync($"Hi {conv.From.Username}!");
+        await conv.PostMessage($"Hi {conv.From.Username}!");
     });
 
 Or publish simple messages to a Slack channel/group/DM:
