@@ -17,16 +17,19 @@ dotnet_csproj:
 build_script:
   - cmd: >-
       dotnet --version
-      dotnet restore src/SlackBotNet/SlackBotNet.csproj
+      
       dotnet build src/
 
       dotnet pack src/SlackBotNet/SlackBotNet.csproj --output ../../deploy --include-symbols --include-source
+      
       dotnet pack src/SlackBotNet.Matcher.Luis/SlackBotNet.Matcher.Luis.csproj --output ../../deploy --include-symbols --include-source
 
 test_script:
   - cmd: >-
       dotnet restore src/SlackBotNet.Tests/SlackBotNet.Tests.csproj
+      
       cd src/SlackBotNet.Tests
+      
       dotnet test
 
 artifacts:
