@@ -52,7 +52,7 @@ namespace SlackBotNet.Tests
             var second = TimeBetween(1, 2);
 
             // allow some wiggle room with timing
-            var measure = TimeSpan.FromSeconds(0.98);
+            var measure = TimeSpan.FromSeconds(0.92);
             
             Assert.True(TimeBetween(0, 1) >= measure, $"Expected {first} >= {measure}");
             Assert.True(TimeBetween(1, 2) >= measure, $"Expected {second} >= {measure}");
