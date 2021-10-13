@@ -92,7 +92,7 @@ namespace SlackBotNet.State
             foreach (var group in data["groups"])
             {
                 bool isArchived = group["is_archived"].Value<bool>();
-                bool isMember = group["members"].Values<string>().Contains(state.BotUserId);
+                bool isMember = group["is_member"].Value<bool>();
 
                 if (isArchived || !isMember)
                     continue;

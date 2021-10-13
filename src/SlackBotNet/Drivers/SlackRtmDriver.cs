@@ -169,7 +169,10 @@ namespace SlackBotNet.Drivers
         private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus, ILogger logger)
         {
             logger.LogDebug("Retrieving websocket URL");
-            var json = await HttpClient.GetStringAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
+            var response = await HttpClient.GetAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
             var jData = JObject.Parse(json);
 
             string websocketUrl = jData["url"].Value<string>();
