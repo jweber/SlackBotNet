@@ -60,59 +60,12 @@ namespace SlackBotNet.State
             return state;
         }
 
-        public static SlackBotState InitializeFromRtmStart(JObject data)
+        public static SlackBotState InitializeFromRtmConnect(JObject data)
         {
             var state = new SlackBotState();
 
             state.BotUserId = data["self"]["id"].Value<string>();
             state.BotUsername = data["self"]["name"].Value<string>();
-
-            foreach (var user in data["users"])
-            {
-                if (user["deleted"].Value<bool>())
-                    continue;
-                
-                state.AddUser(user["id"].Value<string>(), user["name"].Value<string>());
-            }
-
-            foreach (var channel in data["channels"])
-            {
-                bool isArchived = channel["is_archived"].Value<bool>();
-                bool isMember = channel["is_member"].Value<bool>();
-
-                if (isArchived || !isMember)
-                    continue;
-
-                state.AddHub(
-                    channel["id"].Value<string>(),
-                    channel["name"].Value<string>(),
-                    HubType.Channel);
-            }
-
-            foreach (var group in data["groups"])
-            {
-                bool isArchived = group["is_archived"].Value<bool>();
-                bool isMember = group["is_member"].Value<bool>();
-
-                if (isArchived || !isMember)
-                    continue;
-
-                state.AddHub(
-                    group["id"].Value<string>(),
-                    group["name"].Value<string>(),
-                    HubType.Group);
-            }
-
-            foreach (var im in data["ims"])
-            {
-                string userId = im["user"].Value<string>();
-
-                state.AddHub(
-                    im["id"].Value<string>(),
-                    state.GetUser(userId)?.Username ?? userId,
-                    HubType.DirectMessage
-                );
-            }
 
             return state;
         }

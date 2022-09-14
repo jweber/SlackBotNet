@@ -2,9 +2,9 @@ using Newtonsoft.Json.Linq;
 using SlackBotNet.State;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
@@ -165,11 +165,83 @@ namespace SlackBotNet.Drivers
                 }
             }
         }
+
+        private async Task InitializeUsers(SlackBotState state)
+        {
+            var response = await HttpClient.GetAsync($"https://slack.com/api/users.list?token={this.slackToken}");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            var jData = JObject.Parse(json);
+
+            if (!jData["members"].Any())
+                return;
+            
+            foreach (var user in jData["members"])
+            {
+                if (user["deleted"].Value<bool>())
+                    continue;
+                
+                state.AddUser(user["id"].Value<string>(), user["name"].Value<string>());
+            }
+        }
+
+        private async Task InitializeChannels(SlackBotState state)
+        {
+            var response = await HttpClient.GetAsync($"https://slack.com/api/conversations.list?token={this.slackToken}&types=public_channel,private_channel,im,mpim");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            var jData = JObject.Parse(json);
+
+            if (!jData["channels"].Any())
+                return;
+            
+            foreach (var channel in jData["channels"])
+            {
+                bool isArchived = channel["is_archived"].Value<bool>();
+                if (isArchived)
+                    continue;
+
+                if (channel["is_im"].Value<bool>())
+                {
+                    string userId = channel["user"].Value<string>();
+                    
+                    state.AddHub(
+                        channel["id"].Value<string>(),
+                        state.GetUser(userId)?.Username ?? userId,
+                        HubType.DirectMessage);
+                }
+                else if (channel["is_channel"].Value<bool>())
+                {
+                    bool isMember = channel["is_member"].Value<bool>();
+                    if (!isMember)
+                        continue;
+                    
+                    state.AddHub(
+                        channel["id"].Value<string>(),
+                        channel["name"].Value<string>(),
+                        HubType.Channel);
+                }
+                else if (channel["is_group"].Value<bool>())
+                {
+                    bool isMember = channel["is_member"].Value<bool>();
+                    if (!isMember)
+                        continue;
+                    
+                    state.AddHub(
+                        channel["id"].Value<string>(),
+                        channel["name"].Value<string>(),
+                        HubType.Group);
+                }
+                
+            }
+        }
         
         private async Task<SlackBotState> ConnectRtmAsync(IMessageBus bus, ILogger logger)
         {
             logger.LogDebug("Retrieving websocket URL");
-            var response = await HttpClient.GetAsync($"https://slack.com/api/rtm.start?token={this.slackToken}");
+            var response = await HttpClient.GetAsync($"https://slack.com/api/rtm.connect?token={this.slackToken}");
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();
@@ -177,7 +249,10 @@ namespace SlackBotNet.Drivers
 
             string websocketUrl = jData["url"].Value<string>();
 
-            var state = SlackBotState.InitializeFromRtmStart(jData);
+            var state = SlackBotState.InitializeFromRtmConnect(jData);
+
+            await this.InitializeUsers(state);
+            await this.InitializeChannels(state);
 
             this.websocket = new ClientWebSocket();
             this.websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
