@@ -166,75 +166,104 @@ namespace SlackBotNet.Drivers
             }
         }
 
-        private async Task InitializeUsers(SlackBotState state)
+        private async Task InitializeUsers(ILogger logger, SlackBotState state, string cursor = null)
         {
-            var response = await HttpClient.GetAsync($"https://slack.com/api/users.list?token={this.slackToken}");
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync();
-            var jData = JObject.Parse(json);
-
-            if (!jData["members"].Any())
-                return;
-            
-            foreach (var user in jData["members"])
+            logger.LogDebug("Initializing known users...");
+            while (true)
             {
-                if (user["deleted"].Value<bool>())
-                    continue;
-                
-                state.AddUser(user["id"].Value<string>(), user["name"].Value<string>());
+                var requestUri = $"https://slack.com/api/users.list?token={this.slackToken}";
+                if (!string.IsNullOrEmpty(cursor)) 
+                    requestUri += $"&cursor={cursor}";
+
+                var response = await HttpClient.GetAsync(requestUri);
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync();
+                var jData = JObject.Parse(json);
+
+                if (!jData["members"].Any()) return;
+
+                foreach (var user in jData["members"])
+                {
+                    if (user["deleted"].Value<bool>()) continue;
+
+                    state.AddUser(user["id"].Value<string>(), user["name"].Value<string>());
+                }
+
+                if (jData["response_metadata"]?["next_cursor"] != null)
+                {
+                    cursor = jData["response_metadata"]["next_cursor"].Value<string>();
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                    {
+                        logger.LogDebug("Requesting next page of known users");
+                        continue;
+                    }
+                }
+
+                break;
             }
         }
 
-        private async Task InitializeChannels(SlackBotState state)
+        private async Task InitializeChannels(ILogger logger, SlackBotState state, string cursor = null)
         {
-            var response = await HttpClient.GetAsync($"https://slack.com/api/conversations.list?token={this.slackToken}&types=public_channel,private_channel,im,mpim");
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync();
-            var jData = JObject.Parse(json);
-
-            if (!jData["channels"].Any())
-                return;
-            
-            foreach (var channel in jData["channels"])
+            logger.LogDebug("Initializing known conversations...");
+            while (true)
             {
-                bool isArchived = channel["is_archived"].Value<bool>();
-                if (isArchived)
-                    continue;
+                var requestUri = $"https://slack.com/api/users.conversations?token={this.slackToken}&types=public_channel,private_channel,im,mpim&exclude_archived=true&limit=500";
+                if (!string.IsNullOrEmpty(cursor)) 
+                    requestUri += $"&cursor={cursor}";
+                
+                var response = await HttpClient.GetAsync(requestUri);
+                response.EnsureSuccessStatusCode();
 
-                if (channel["is_im"].Value<bool>())
+                var json = await response.Content.ReadAsStringAsync();
+                var jData = JObject.Parse(json);
+
+                if (!jData["channels"].Any())
+                    return;
+                
+                foreach (var channel in jData["channels"])
                 {
-                    string userId = channel["user"].Value<string>();
-                    
-                    state.AddHub(
-                        channel["id"].Value<string>(),
-                        state.GetUser(userId)?.Username ?? userId,
-                        HubType.DirectMessage);
-                }
-                else if (channel["is_channel"].Value<bool>())
-                {
-                    bool isMember = channel["is_member"].Value<bool>();
-                    if (!isMember)
+                    bool isArchived = channel["is_archived"].Value<bool>();
+                    if (isArchived)
                         continue;
-                    
-                    state.AddHub(
-                        channel["id"].Value<string>(),
-                        channel["name"].Value<string>(),
-                        HubType.Channel);
-                }
-                else if (channel["is_group"].Value<bool>())
-                {
-                    bool isMember = channel["is_member"].Value<bool>();
-                    if (!isMember)
-                        continue;
-                    
-                    state.AddHub(
-                        channel["id"].Value<string>(),
-                        channel["name"].Value<string>(),
-                        HubType.Group);
+
+                    if (channel["is_im"].Value<bool>())
+                    {
+                        string userId = channel["user"].Value<string>();
+                        
+                        state.AddHub(
+                            channel["id"].Value<string>(),
+                            state.GetUser(userId)?.Username ?? userId,
+                            HubType.DirectMessage);
+                    }
+                    else if (channel["is_channel"].Value<bool>())
+                    {
+                        state.AddHub(
+                            channel["id"].Value<string>(),
+                            channel["name"].Value<string>(),
+                            HubType.Channel);
+                    }
+                    else if (channel["is_group"].Value<bool>())
+                    {
+                        state.AddHub(
+                            channel["id"].Value<string>(),
+                            channel["name"].Value<string>(),
+                            HubType.Group);
+                    }
                 }
                 
+                if (jData["response_metadata"]?["next_cursor"] != null)
+                {
+                    cursor = jData["response_metadata"]["next_cursor"].Value<string>();
+                    if (!string.IsNullOrWhiteSpace(cursor))
+                    {
+                        logger.LogDebug("Requesting next page of known conversations");
+                        continue;
+                    }
+                }
+
+                break;
             }
         }
         
@@ -251,8 +280,8 @@ namespace SlackBotNet.Drivers
 
             var state = SlackBotState.InitializeFromRtmConnect(jData);
 
-            await this.InitializeUsers(state);
-            await this.InitializeChannels(state);
+            await this.InitializeUsers(logger, state);
+            await this.InitializeChannels(logger, state);
 
             this.websocket = new ClientWebSocket();
             this.websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
